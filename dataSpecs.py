@@ -45,7 +45,7 @@ size2016train, polarity201rtrain, counter2016train = getPolarityFrequencies('dat
 print(polarity2015)
 print('2015test size: ' + str(size2015test) + ', counter: ' + listToString(counter2015test) + ' percentages: ' + listToString(counter2015test/size2015test) )
 print('2015train size: ' + str(size2015train) + ', counter: ' + listToString(counter2015train) + ' percentages: ' + listToString(counter2015train/size2015train) )
-print('2016test size: ' + str(size2016test) + ', counter: ' + listToString(counter2016test) + ' percentages: ' + listToString(counter2016test/size2016test) )
+print('2016 size: ' + str(size2016test) + ', counter: ' + listToString(counter2016test) + ' percentages: ' + listToString(counter2016test/size2016test) )
 print('2016train size: ' + str(size2016train) + ', counter: ' + listToString(counter2016train) + ' percentages: ' + listToString(counter2016train/size2016train) )
 
 print('remaining2015test size: ' + str(size2015) + ', counter: ' + listToString(counter2015) + ' percentages: ' + listToString(counter2015/size2015) )

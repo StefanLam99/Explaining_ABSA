@@ -3,53 +3,62 @@ from config import *
 from lcrModelAlt import *
 import tensorflow as tf
 
-word_id_file, w2v = load_w2v(FLAGS.embedding_path, FLAGS.embedding_dim)
+class classifier:
 
-input_file = 'data/programGeneratedData/300remainingtestdata2015.txt'
-te_x, te_sen_len, te_x_bw, te_sen_len_bw, te_y, te_target_word, te_tar_len, _, _, _  = load_inputs_twitter(input_file, word_id_file, FLAGS.max_sentence_len, 'TC', FLAGS.is_r == '1', FLAGS.max_target_len)
+    def __init__(self, input_file, model_path):
+        """
+        Constructor to initialize a black box model
+        :param input_file: the data
+        :param model_path: the path to the trained model
+        """
+        self.word_id_mapping, self.w2v = load_w2v(FLAGS.embedding_path, FLAGS.embedding_dim)
 
-def get_instance(index, input_file):
-    """
-    Method to get one instance at index.
-    :param index: this is the index of the instance we get
-    :param input_file: the file containing the .txt data of the instances (reviews)
-    :return: the input parameters of one instance (see get_prob for the definion of each parameter)
-    """
-    x_left, x_left_len, x_right, x_right_len, y_true, target_words, target_words_len, _, _, _ = load_inputs_twitter(
-        input_file, word_id_file, FLAGS.max_sentence_len, 'TC', FLAGS.is_r == '1', FLAGS.max_target_len)
+        self.x_left, self.x_left_len, self.x_right, self.x_right_len, self.y_true, self.target_words, \
+        self.target_words_len, _, _, _ = load_inputs_twitter(input_file, self.word_id_mapping, FLAGS.max_sentence_len,
+                                                             'TC', FLAGS.is_r == '1', FLAGS.max_target_len)
+        ##restoring the trained model
+        # delete the current graph
+        tf.reset_default_graph()
+        # import the loaded graph
+        self.imported_graph = tf.train.import_meta_graph(model_path + '.meta')
+        config = tf.ConfigProto(allow_soft_placement=True)
+        config.gpu_options.allow_growth = True
 
-    return x_left[index:index+1], x_left_len[index:index+1], x_right[index:index+1], x_right_len[index:index+1], \
-           y_true[index:index+1], target_words[index:index+1], target_words_len[index:index+1]
+        self.sess = tf.Session(config=config)
+        self.sess.run(tf.global_variables_initializer())
+            # restore the saved variables
+        self.imported_graph.restore(self.sess, model_path)
+        self.graph = tf.get_default_graph()
+
+    def get_instance(self, index, input_file):
+        """
+        Method to get one instance at index.
+        :param index: this is the index of the instance we get
+        :param input_file: the file containing the .txt data of the instances (reviews)
+        :return: the input parameters of one instance (see get_prob for the definion of each parameter)
+        """
+
+        return self.x_left[index:index+1], self.x_left_len[index:index+1], self.x_right[index:index+1], \
+               self.x_right_len[index:index+1], self.y_true[index:index+1], self.target_words[index:index+1], \
+               self.target_words_len[index:index+1]
 
 
-def get_prob(x_left, x_left_len, x_right, x_right_len, y_true, target_word, target_words_len, model_path):
-    """
-    Method to get the probability vector of an instance based on the model of...
-    :param x_left: the words to the left of the targets represented by a sequence id's
-    :param x_left_len: number of nonzeros in x_left, i.e., number of words to the left of the target
-    :param x_right: the words to the right of the targets represented by a sequence id's
-    :param x_right_len: number of nonzeros in x_left, i.e., number of words to the right of the target
-    :param y_true: true label of the sentence
-    :param target_word: the target words in the sentence represented by a sequence of id's
-    :param target_words_len: number of nonzeros in target_words, i.e., number of words to the right of the target
-    :param model_path: the path to the trained model of...
-    :return: a probability vector that classifies the instance
-    """
 
-    load_dir = model_path
-    load_dir = 'trainedModel/2016lol-d1-0.5d2-0.5b-20r-0.07l2-1e-05sen-80dim-300h-300c-3/-282'
-    # delete the current graph
-    tf.reset_default_graph()
-    # import the loaded graph
-    imported_graph = tf.train.import_meta_graph(load_dir + '.meta')
-    config = tf.ConfigProto(allow_soft_placement=True)
-    config.gpu_options.allow_growth = True
 
-    with tf.Session(config=config) as sess:
-        # restore the saved variables
-        imported_graph.restore(sess, load_dir )
-        graph = tf.get_default_graph()
-
+    def get_prob(self, x_left, x_left_len, x_right, x_right_len, y_true, target_word, target_words_len, model_path):
+        """
+        Method to get the probability vector of an instance based on the model of...
+        :param x_left: the words to the left of the targets represented by a sequence id's
+        :param x_left_len: number of nonzeros in x_left, i.e., number of words to the left of the target
+        :param x_right: the words to the right of the targets represented by a sequence id's
+        :param x_right_len: number of nonzeros in x_left, i.e., number of words to the right of the target
+        :param y_true: true label of the sentence
+        :param target_word: the target words in the sentence represented by a sequence of id's
+        :param target_words_len: number of nonzeros in target_words, i.e., number of words to the right of the target
+        :param model_path: the path to the trained model of...
+        :return: a probability vector that classifies the instance
+        """
+        graph = self.graph
         #setting keys for the feed dict
         x = graph.get_tensor_by_name('inputs/x:0')
         y = graph.get_tensor_by_name('inputs/y:0')
@@ -76,6 +85,22 @@ def get_prob(x_left, x_left_len, x_right, x_right_len, y_true, target_word, targ
 
        ##getting prediction of instance
         prob = graph.get_tensor_by_name('softmax/prediction:0')
-        prob = sess.run(prob,feed_dict=feed_dict)
+        prob = self.sess.run(prob,feed_dict=feed_dict)
+        pred = np.argmax(prob[0]) - 1
+        return pred, prob[0] #only get the relevant probability
 
-    return prob[0] #only get the relevant probability
+
+
+    def get_GloVe_embedding(self, sentence):
+        """
+        Method to get a word embedding of a sentence with id's as word representations
+        :param sentence: array with length 80 (max sentence length)
+        :return: the word embedding of each word (dim = (300,80))
+        """
+        sentence_embedding = np.zeros((FLAGS.embedding_dim,FLAGS.max_sentence_len))
+
+        for i in range(len(sentence)):
+            if sentence[i] == 0:
+                break
+            sentence_embedding[:,i] = self.w2v[sentence[i],:]
+        return sentence_embedding

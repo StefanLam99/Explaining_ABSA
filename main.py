@@ -6,12 +6,11 @@
 import tensorflow as tf
 import nltk
 nltk.download('popular')
-import lcrModel
-import lcrModelInverse
+
 import lcrModelAlt
-import cabascModel
+
 import pickle as pkl
-import svmModel
+
 import lcrModelAlt_hierarchical_v4
 from OntologyReasoner import OntReasoner
 from loadData import *
@@ -70,91 +69,14 @@ def main(_):
        _, pred2, fw2, bw2, tl2, tr2 = lcrModelAlt_hierarchical_v4.main(FLAGS.train_path, test, accuracyOnt, test_size,
                                                         remaining_size)
        tf.reset_default_graph()
-    # LCR-Rot model
-    if runLCRROT == True:
-        _, pred1, fw1, bw1, tl1, tr1, sent, target, true = lcrModel.main(FLAGS.train_path,test, accuracyOnt, test_size, remaining_size)
-        tf.reset_default_graph()
-
-    # LCR-Rot-inv model
-    if runLCRROTINVERSE == True:
-        lcrModelInverse.main(FLAGS.train_path,test, accuracyOnt, test_size, remaining_size)
-        tf.reset_default_graph()
 
     # LCR-Rot-hop model
     if runLCRROTALT == True:
 
         _, pred2, fw2, bw2, tl2, tr2 = lcrModelAlt.main(FLAGS.train_path,test, accuracyOnt, test_size, remaining_size)
-        #print('help: ')
+
         print([_, pred2, fw2, bw2, tl2, tr2])
-       # with open('trained_model' + str(FLAGS.year) + '.pkl', 'wb') as f:
-         #   pkl.dump([_, pred2, fw2, bw2, tl2, tr2], f)
-          #  tf.reset_default_graph()
 
-
-
-            #f.close()
-
-
-    # CABASC model
-    if runCABASC == True:
-        _, pred3, weights = cabascModel.main(FLAGS.train_path,test, accuracyOnt, test_size, remaining_size)
-        if weightanalysis and runLCRROT and runLCRROTALT:
-            outF= open('sentence_analysis.txt', "w")
-            dif = np.subtract(pred3, pred1)
-            for i, value in enumerate(pred3):
-                if value == 1 and pred2[i] == 0:
-                    sentleft, sentright = [], []
-                    flag = True
-                    for word in sent[i]:
-                        if word == '$t$':
-                            flag = False
-                            continue
-                        if flag:
-                            sentleft.append(word)
-                        else:
-                            sentright.append(word)
-                    print(i)
-                    outF.write(str(i))
-                    outF.write("\n")
-                    outF.write('lcr pred: {}; CABASC pred: {}; lcralt pred: {}; true: {}'.format(pred1[i], pred3[i], pred2[i], true[i]))
-                    outF.write("\n")
-                    outF.write(";".join(sentleft))
-                    outF.write("\n")
-                    outF.write(";".join(str(x) for x in fw1[i][0]))
-                    outF.write("\n")
-                    outF.write(";".join(sentright))
-                    outF.write("\n")
-                    outF.write(";".join(str(x) for x in bw1[i][0]))
-                    outF.write("\n")
-                    outF.write(";".join(target[i]))
-                    outF.write("\n")
-                    outF.write(";".join(str(x) for x in tl1[i][0]))
-                    outF.write("\n")
-                    outF.write(";".join(str(x) for x in tr1[i][0]))
-                    outF.write("\n")
-                    outF.write(";".join(sentleft))
-                    outF.write("\n")
-                    outF.write(";".join(str(x) for x in fw2[i][0]))
-                    outF.write("\n")
-                    outF.write(";".join(sentright))
-                    outF.write("\n")
-                    outF.write(";".join(str(x) for x in bw2[i][0]))
-                    outF.write("\n")
-                    outF.write(";".join(target[i]))
-                    outF.write("\n")
-                    outF.write(";".join(str(x) for x in tl2[i][0]))
-                    outF.write("\n")
-                    outF.write(";".join(str(x) for x in tr2[i][0]))
-                    outF.write("\n")
-                    outF.write(";".join(sent[i]))
-                    outF.write("\n")
-                    outF.write(";".join(str(x) for x in weights[i][0]))
-                    outF.write("\n")
-            outF.close()
-
-    # BoW model
-    if runSVM == True:
-        svmModel.main(FLAGS.train_svm_path,test, accuracyOnt, test_size, remaining_size)
 
     print('Finished program succesfully')
 
