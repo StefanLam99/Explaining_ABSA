@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="Encoding" addBOMForNewFiles="with NO BOM">
+    <file url="file://$PROJECT_DIR$/Example.py" charset="windows-1252" />
+    <file url="file://$PROJECT_DIR$/OntologyReasoner.py" charset="windows-1252" />
+    <file url="file://$PROJECT_DIR$/config.py" charset="windows-1252" />
+    <file url="file://$PROJECT_DIR$/dataReader2016.py" charset="windows-1252" />
+    <file url="file://$PROJECT_DIR$/dataSpecs.py" charset="windows-1252" />
+    <file url="file://$PROJECT_DIR$/getBERTusingColab.py" charset="windows-1252" />
+    <file url="file://$PROJECT_DIR$/lcrModelAlt.py" charset="windows-1252" />
+    <file url="file://$PROJECT_DIR$/lcrModelAlt_hierarchical_v4.py" charset="windows-1252" />
+    <file url="file://$PROJECT_DIR$/nn_layer.py" charset="windows-1252" />
+    <file url="file://$PROJECT_DIR$/prepareBERT.py" charset="windows-1252" />
+    <file url="file://$PROJECT_DIR$/requirements.txt" charset="windows-1252" />
+    <file url="file://$PROJECT_DIR$/utils.py" charset="windows-1252" />
+  </component>
+</project>
