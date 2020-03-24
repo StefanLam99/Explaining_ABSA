@@ -620,3 +620,47 @@ def load_inputs_full(input_file, word_id_file, sentence_len, type_='', is_r=True
                np.asarray(tar_len), np.asarray(y)
     else:
         return np.asarray(x), np.asarray(sen_len), np.asarray(y)
+
+def get_Allwords(word_id_mapping):
+    """
+    Method to get all the words in string format at the repsective id index
+    :param word_id_mapping: dictionary with keys: words, values: id
+    :return: the words
+    """
+    words = []
+    for word in word_id_mapping.keys():
+        words.append(word)
+
+    return words
+
+def get_polarityStats(predictions):
+    # counters:
+    pos = 0
+    neu = 0
+    neg = 0
+
+    for i in range(0, len(predictions)):
+        if (int(predictions[i]) == 1):
+            pos += 1
+        elif (int(predictions[i]) == 0):
+            neu += 1
+        elif (int(predictions[i]) == -1):
+            neg += 1
+
+    return neg, neu, pos
+
+def orderProb(probabilities, year):
+    """
+    convert probs from the classifier into the right format: [neg,neu,pos]
+    """
+    nr, nc = probabilities.shape
+    correctProb = np.zeros((nr,nc))
+    if year == 2016:
+        correctProb[:,0] = probabilities[:,0]
+        correctProb[:,1] = probabilities[:,2]
+        correctProb[:,2] = probabilities[:,1]
+    elif(year == 2015):
+        correctProb[:,0] = probabilities[:,1]
+        correctProb[:,1] = probabilities[:,2]
+        correctProb[:,2] = probabilities[:,0]
+    return correctProb
