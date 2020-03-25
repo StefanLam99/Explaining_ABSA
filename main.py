@@ -24,14 +24,14 @@ import sys
 
 # main function
 def main(_):
-    loadData = False #only use for Maria Model
+    loadData = False
     useOntology = False # Ontology
     runCABASC = False
     runLCRROT = False
     runLCRROTINVERSE = False
-    runLCRROTALT = True  #Olaf model
+    runLCRROTALT = False  #Olaf model
     runSVM = False
-    runLCRROTALT_v4 = False  # Maria Model
+    runLCRROTALT_v4 = True  # Maria Model
     weightanalysis = False
 
     #determine if backupmethod is used

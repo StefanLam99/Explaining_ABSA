@@ -3,15 +3,16 @@ from loadData import getStatsFromFile
 import numpy as np
 
 #initialisation of object for year 2016:
-input_file = 'data/programGeneratedData/300remainingtestdata2016.txt'
-model_path = 'trainedModel/2016/-18800'
 
+input_file = 'data/programGeneratedData/300remainingtestdata2016.txt'
+model_path = 'trainedModelOlaf/2016/-18800'
+year = 2016
 #initialisation of object for year 2015:
 #input_file = 'data/programGeneratedData/300remainingtestdata2015.txt'
-#model_path = 'trainedModel/2016/-12800'
+#model_path = 'trainedModelOlaf/2015/-12800'
 
 
-A = classifier(input_file, model_path) #A is our classifier
+A = classifier(input_file, model_path, year) #A is our classifier
 
 # Example 1: getting accuracy of the remaining test data
 
@@ -39,8 +40,8 @@ print('accuracy: ' + str(acc))
 
 #Example 2: getting word embedding representation of words We don't want to remove the aspect in our perturbations
 #so only consider x_left and x_right for our sentences first
-
-sentence_embedding = A.get_GloVe_embedding(A.x_left[1]) #embedding for 1'th instance
+''' 
+sentence_embedding = A.get_GloVe_embedding(A.x_left[1], len=A.x_left_len[1]) #embedding for 1'th instance
 print('embedding of the sentence is given by: ')
 print(sentence_embedding)
 print(sentence_embedding.shape)
@@ -61,7 +62,7 @@ print(predictions)
 print(probabilities)
 
 print(polarity)
-
+'''
 
 
 

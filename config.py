@@ -29,10 +29,13 @@ tf.app.flags.DEFINE_string('is_r', '1', 'prob')
 tf.app.flags.DEFINE_integer('max_target_len', 19, 'max target length')
 
 # traindata, testdata adn embeddings
-tf.app.flags.DEFINE_string("train_path", "data/programGeneratedData/"+str(FLAGS.embedding_dim)+'traindata'+str(FLAGS.year)+".txt", "train data path")
+tf.app.flags.DEFINE_string("train_path","data/programGeneratedData/"+str(FLAGS.embedding_dim)+'traindata'+str(FLAGS.year)+".txt" , "train data path")
 tf.app.flags.DEFINE_string("test_path", "data/programGeneratedData/"+str(FLAGS.embedding_dim)+'testdata'+str(FLAGS.year)+".txt", "formatted test data path")
-tf.app.flags.DEFINE_string("embedding_path", "data/programGeneratedData/"+str(FLAGS.embedding_dim)+'embedding'+str(FLAGS.year)+".txt", "pre-trained glove vectors file path")
+tf.app.flags.DEFINE_string("embedding_path","data/programGeneratedData/"+str(FLAGS.embedding_dim)+'embedding'+str(FLAGS.year)+".txt" , "pre-trained glove vectors file path")
 tf.app.flags.DEFINE_string("remaining_test_path", "data/programGeneratedData/"+str(FLAGS.embedding_dim)+'remainingtestdata'+str(FLAGS.year)+".txt", "formatted remaining test data path after ontology")
+#"data/programGeneratedData/BERT768traindata2015.txt"
+#"data/programGeneratedData/BERT768testdata2015.txt"
+#"data/programGeneratedData/BERT768embedding2015.txt"
 
 #svm traindata, svm testdata
 tf.app.flags.DEFINE_string("train_svm_path", "data/programGeneratedData/"+str(FLAGS.embedding_dim)+'trainsvmdata'+str(FLAGS.year)+".txt", "train data path")
@@ -54,7 +57,7 @@ tf.app.flags.DEFINE_string("test_data", "data/externalData/restaurant_test_"+str
                     "test data path")
 
 tf.app.flags.DEFINE_string('method', 'AE', 'model type: AE, AT or AEAT')
-tf.app.flags.DEFINE_string('prob_file', 'prob1.txt', 'prob')
+tf.app.flags.DEFINE_string('prob_file', 'probMaria2015.txt', 'prob')
 tf.app.flags.DEFINE_string('saver_file', 'prob1.txt', 'prob')
 
 

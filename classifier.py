@@ -90,7 +90,8 @@ class classifier:
 
        ##getting prediction of instance
         prob = self.sess.run(self.prob,feed_dict=feed_dict)
-        prob = orderProb(prob)
+        print(prob)
+        prob = orderProb(prob,self.year)
         pred = np.argmax(prob[0]) - 1
 
         return pred, prob[0] #only get the relevant probability

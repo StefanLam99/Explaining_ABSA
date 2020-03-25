@@ -149,7 +149,7 @@ def main(train_path, test_path, accuracyOnt, test_size, remaining_size, learning
         train_summary_op, test_summary_op, validate_summary_op, train_summary_writer, test_summary_writer, \
         validate_summary_writer = summary_func(loss, acc_prob, test_loss, test_acc, _dir, title, sess)
 
-        save_dir = 'temp_model/' + str(timestamp) + '_' + title + '/'
+        save_dir = 'trainedModelMaria/' + str(FLAGS.year) + '/'
         # saver = saver_func(save_dir)
 
         sess.run(tf.global_variables_initializer())
@@ -160,7 +160,7 @@ def main(train_path, test_path, accuracyOnt, test_size, remaining_size, learning
         else:
             is_r = False
 
-        _, tr_x, tr_sen_len, tr_x_bw, tr_sen_len_bw, tr_y, tr_target_word, tr_tar_len, _, _, _ = load_inputs_twitter(
+        tr_x, tr_sen_len, tr_x_bw, tr_sen_len_bw, tr_y, tr_target_word, tr_tar_len, _, _, _ = load_inputs_twitter(
             train_path,
             word_id_mapping,
             FLAGS.max_sentence_len,
@@ -168,7 +168,7 @@ def main(train_path, test_path, accuracyOnt, test_size, remaining_size, learning
             is_r,
             FLAGS.max_target_len
         )
-        _, te_x, te_sen_len, te_x_bw, te_sen_len_bw, te_y, te_target_word, te_tar_len, _, _, _ = load_inputs_twitter(
+        te_x, te_sen_len, te_x_bw, te_sen_len_bw, te_y, te_target_word, te_tar_len, _, _, _ = load_inputs_twitter(
             test_path,
             word_id_mapping,
             FLAGS.max_sentence_len,

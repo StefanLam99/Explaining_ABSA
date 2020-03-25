@@ -15,7 +15,6 @@ def main():#initialisation of inputs:
         input_file = 'data/programGeneratedData/300remainingtestdata2015.txt'
         model_path = 'trainedModelOlaf/2015/-12800'
     elif year==2016:
-
         input_file = 'data/programGeneratedData/300remainingtestdata2016.txt'
         model_path = 'trainedModelOlaf/2016/-18800'
 
@@ -26,16 +25,18 @@ def main():#initialisation of inputs:
     seed = 2020
     dict = dict_correct #change depending on which case you want to know
     width = 0.5
-    write_path = 'data/Lime/test2.txt'
+    K = 5 # number of coefficients to check
+    B = 5 # number of instances to get
+    write_path = 'data/Lime/correct2015.txt'
     r = check_random_state(seed)
 
 
+    #Start of LIME implementatino
     left_coefs = []
     right_coefs = []
     left_words = []
     right_words = []
     targets = []
-
     x_left = dict['x_left']
     x_left_len = dict['x_left_len']
     x_right = dict['x_right']
@@ -74,26 +75,34 @@ def main():#initialisation of inputs:
             #models
             model_left = LinearRegression()
             model_right = LinearRegression()
-            #model_left_log = SGDClassifier(loss='log')
-            #model_right_log = SGDClassifier(loss='log')
+
 
             #fitting the regression model with a constant
             constant = np.ones((num_samples, 1))
-            model_left.fit(np.concatenate((constant, x_inverse_left),axis=1), predictions, sample_weight=weights_left)
-            model_right.fit(np.concatenate((constant, x_inverse_right),axis=1), predictions, sample_weight=weights_right)
-            #model_left_log.fit(np.concatenate((constant, x_inverse_left),axis=1), predictions, sample_weight=weights_left)
-            #model_right_log.fit(np.concatenate((constant, x_inverse_right),axis=1), predictions, sample_weight=weights_right)
+            if(x_left_len[index] > 0):
+                model_left.fit(np.concatenate((constant, x_inverse_left),axis=1), predictions, sample_weight=weights_left)
+            else:
+                model_left.fit(constant, predictions)
+
+            if(x_right_len[index] > 0):
+                model_right.fit(np.concatenate((constant, x_inverse_right),axis=1), predictions, sample_weight=weights_right)
+            else:
+                model_right.fit(constant, predictions)
+
+
+
 
             #words:
-            left_words.append(['constant'] + f.get_String_Sentence(x_lime_left[0]))
-            right_words.append(['constant'] + f.get_String_Sentence(x_lime_right[0]))
+            left_words.append(np.array(['C'] + f.get_String_Sentence(x_lime_left[0])))
+            right_words.append(np.array(['C'] + f.get_String_Sentence(x_lime_right[0])))
             targets.append(f.get_String_Sentence(target_word[index]))
+
+
 
             #coeffs
             left_coefs.append(model_left.coef_)
             right_coefs.append(model_right.coef_)
-            #left_coefs.append(model_left_log.coef_)
-            #right_coefs.append(model_right_log.coef_)
+
 
             results.write('Instance ' + str(index) +':' +'\n')
             results.write('True Label: ' + str(true_label[index]) + ', Predicted label: ' + str(int(pred[index])) + '\n')
@@ -102,28 +111,75 @@ def main():#initialisation of inputs:
             results.write('Right coefs: ' + str(right_coefs[index]) + '\n')
             results.write('Right words: ' + str(right_words[index]) + '\n')
             results.write('Target words: ' + str(targets[index]) + '\n')
+            results.write('predictions: ' + str(predictions) + '\n')
             results.write('\n')
         results.close()
+
+    #getting the B instances with highest marginal effect
+    left_coefs_k = []
+    right_coefs_k = []
+    left_words_k = []
+    right_words_k = []
+    left_coefs = np.array(left_coefs)
+    right_coefs = np.array(right_coefs)
+    left_words = np.array(left_words)
+    right_words = np.array(right_words)
+    sum_coef = []
+    for i in range(size):
+        #coefficients are K of equal to the length of the sentence
+        if(K > int(x_left_len[i])):
+            lk = int(x_left_len[i])
+        else:
+            lk = K
+
+        if(K > int(x_right_len[i])):
+            rk = int(x_right_len[i])
+        else:
+            rk = K
+
+        l_coefs = np.absolute(left_coefs[i] - left_coefs[i][0]) #beta_j - beta_0
+        r_coefs = np.absolute(right_coefs[i] - right_coefs[i][0])
+        left_maxargs = np.argpartition(l_coefs, -lk)[-lk:]
+        right_maxargs = np.argpartition(r_coefs, -rk)[-rk:]
+
+        left_coefs_k.append(left_coefs[i][left_maxargs])
+        right_coefs_k.append(right_coefs[i][right_maxargs])
+
+        left_words_k.append(left_words[i][left_maxargs])
+        right_words_k.append(right_words[i][right_maxargs])
+
+        sum_coef.append(np.sum(left_coefs_k[i]) + np.sum(right_coefs_k[i]))
+    picked_instances = np.argpartition(sum_coef, -B)[-B:]
+
+    with open('data/Lime/instances_picked_correct' + str(year) + '.txt', 'w') as results:
+        for i in picked_instances:
+            results.write('picked instance ' + str(i) + ":" )
+            results.write(' True Label: ' + str(true_label[i]) + ', Predicted label: ' + str(int(pred[i])) + '\n')
+            results.write('Sentence: ' + str(left_words[i]) + str(targets[i]) + str(np.flip(right_words[i])) + '\n')
+            results.write('\n')
+
+            results.write('High left: ' + str(left_coefs_k[i]) + '\n')
+            results.write('High words left: ' + str(left_words_k[i]) + '\n')
+            results.write('\n')
+            results.write('Left coefs: ' + str(left_coefs[i]) + '\n')
+            results.write('Left words: ' + str(left_words[i]) + '\n')
+            results.write('\n')
+            results.write('High right: ' + str(right_coefs_k[i]) + '\n')
+            results.write('High words right: ' + str(right_words_k[i]) + '\n')
+            results.write('\n')
+            results.write('Right coefs: ' + str(right_coefs[i]) + '\n')
+            results.write('Right words: ' + str(right_words[i]) + '\n')
+            results.write('\n')
+            results.write('target: ' + str(targets[i]) + '\n')
+            results.write('\n')
+    results.close()
+
+
+
     end = time.time()
     print("It took: " + str(end - start) + 'seconds')
     print('size: ' + str(size))
 
-
-
-
-    '''
-    print(predictions)
-    print(probabilities)
-    print(np.sum(predictions))
-    neg, neu, pos = get_polarityStats(predictions)
-    print('sample_size: ' + str(num_samples) +', neg: ' + str(neg)+', neu: ' + str(neu)+', pos: ' + str(pos))
-    print('neg: ' + str(neg/num_samples))
-    print('neu: ' + str(neu / num_samples))
-    print('pos: ' + str(pos / num_samples))
-    print('true label: ' + str(polarity[index]))
-    '''
-    print(f.get_String_Sentence(x_lime_left[0]))
-    print(f.get_String_Sentence(x_lime_right[0]))
 
 
 
@@ -144,7 +200,7 @@ def lime_perturbation(random, x, x_len, num_samples):
     if(x_len>1):
         sample = random.randint(1, x_len, num_samples-1)
     elif(x_len==0):#if there is no context
-        return np.zeros((num_samples,1)).astype(int)\
+        return np.zeros((num_samples,FLAGS.max_sentence_len)).astype(int)\
             , np.zeros((num_samples,FLAGS.max_sentence_len)).astype(int)\
             , np.zeros(num_samples).astype(int)
     else:
@@ -222,6 +278,9 @@ def countZeros(list):
         if int(e) ==0:
             counter+=1
     return counter
+
+
+
 if __name__ == '__main__':
     main()
 
