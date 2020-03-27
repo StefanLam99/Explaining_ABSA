@@ -13,7 +13,7 @@ class classifier:
         """
         self.input_file = input_file
         self.year = year
-        self.word_id_mapping, self.w2v = load_w2v(FLAGS.embedding_path, FLAGS.embedding_dim)
+        self.word_id_mapping, self.w2v = load_w2v("data/programGeneratedData/"+str(FLAGS.embedding_dim)+'embedding'+str(self.year)+".txt", FLAGS.embedding_dim)
 
         self.x_left, self.x_left_len, self.x_right, self.x_right_len, self.y_true, self.target_word, \
         self.target_words_len, _, _, _ = load_inputs_twitter(input_file, self.word_id_mapping, FLAGS.max_sentence_len,
@@ -96,7 +96,46 @@ class classifier:
 
         return pred, prob[0] #only get the relevant probability
 
+    def get_Allinstances(self):
+        """
+        method to return all instances in a dictionary
+        :return:
+        """
+        size, polarity = getStatsFromFile(self.input_file)
+        size = int(size)
+        correctSize = 0
+        predictions, probabilities = self.get_allProb( self.x_left, self.x_left_len, self.x_right, self.x_right_len, self.y_true,
+                                                 self.target_word, self.target_words_len, size, size)
+        correctDict = {
+            'x_left': [],
+            'x_left_len': [],
+            'x_right': [],
+            'x_right_len': [],
+            'target': [],
+            'target_len': [],
+            'y_true': [],
+            'true_label': [],
+            'pred': []
+
+        }
+        for i in range(size):
+                correctDict['x_left'].append(self.x_left[i])
+                correctDict['x_right'].append(self.x_right[i])
+                correctDict['x_left_len'].append(self.x_left_len[i])
+                correctDict['x_right_len'].append(self.x_right_len[i])
+                correctDict['target'].append(self.target_word[i])
+                correctDict['target_len'].append(self.target_words_len[i])
+                correctDict['y_true'].append(self.y_true[i])
+                correctDict['true_label'].append(int(polarity[i]))
+                correctDict['pred'].append(predictions[i])
+                correctSize +=1
+        correctDict['size'] = correctSize
+        return correctDict
     def get_split_instances(self):
+        """
+        Splits the instances in correct and incorrect as dictionaries
+        :return:
+        """
         size, polarity = getStatsFromFile(self.input_file)
         size = int(size)
         predictions, probabilities = self.get_allProb( self.x_left, self.x_left_len, self.x_right, self.x_right_len, self.y_true,
@@ -154,6 +193,7 @@ class classifier:
         correctDict['size'] = correctSize
         incorrectDict['size'] = incorrectSize
         return correctDict, incorrectDict
+
     def get_allProb(self, x_left, x_left_len, x_right, x_right_len, y_true, target_word, target_words_len, batch_size,num_samples):
         """
         Almost the same as get_prob, but here we input all instances at the same time and get a probability matrix
@@ -186,6 +226,7 @@ class classifier:
             predictions[batch_start:batch_end] = pred
 
         return predictions, probabilities
+
 
     def get_GloVe_embedding(self, sentence, len):
         """

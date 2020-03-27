@@ -660,7 +660,23 @@ def orderProb(probabilities, year):
         correctProb[:,1] = probabilities[:,2]
         correctProb[:,2] = probabilities[:,1]
     elif(year == 2015):
-        correctProb[:,0] = probabilities[:,1]
-        correctProb[:,1] = probabilities[:,2]
-        correctProb[:,2] = probabilities[:,0]
+        correctProb[:,0] = probabilities[:,0]
+        correctProb[:,1] = probabilities[:,1]
+        correctProb[:,2] = probabilities[:,2]
     return correctProb
+
+def compare_preds(pred1,pred2):
+    size1 = len(pred1)
+    size2 = len(pred2)
+    correct = 0
+    if(size1 != size2):
+        raise ValueError("size is not the same! " + str(size1) + " against " + str(size2))
+
+    for i in range(size1):
+        if(pred2[i] == pred1[i]):
+            correct +=1
+
+    print("size is: " + str(size1) + ', correct: ' + str(correct))
+    accuracy = correct/size1
+    print("accuracy is: " + str(correct/size1))
+    return correct, accuracy

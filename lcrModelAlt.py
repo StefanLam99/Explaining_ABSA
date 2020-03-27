@@ -127,7 +127,7 @@ def main(train_path, test_path, accuracyOnt, test_size, remaining_size, learning
         validate_summary_writer = summary_func(loss, acc_prob, test_loss, test_acc, _dir, title, sess)
 
         save_dir = 'temp_model/' + str(timestamp) + '_' + title + '/'
-        save_dir = 'trainedModel/' + str(FLAGS.year) + '/'
+        save_dir = 'trainedModelOlaf/' + str(FLAGS.year) + '/'
         saver = saver_func(save_dir)
 
         sess.run(tf.global_variables_initializer())
