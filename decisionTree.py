@@ -21,13 +21,12 @@ class Decision:
         if(self.word == word):
             self.flag = True
         else:
-            self.flag = True
+            self.flag = False
 
         return self.flag
 
     def __repr__(self):
-        if(self.flag == True):
-            return "Is %s inside instance x?" %(self.word)
+            return "Is %f inside instance x?" %(self.word)
 
 def split(rows, decision):
     true_rows, false_rows = [], []
@@ -76,6 +75,7 @@ def find_best_split(rows):
     best_gain = 0  # keep track of the best information gain
     best_decision = None  # keep train of the feature / value that produced it
     current_uncertainty = gini(rows)
+
     n_features = len(rows[0]) -1 # number of columns
 
     for col in range(n_features):  # for each feature
@@ -83,12 +83,10 @@ def find_best_split(rows):
         values = set([row[col] for row in rows])  # unique values in the column
 
         for val in values:  # for each value
-
             decision = Decision(col, val)
 
             # try splitting the dataset
             true_rows, false_rows = split(rows, decision)
-
             # Skip this split if it doesn't divide the
             # dataset.
             if len(true_rows) == 0 or len(false_rows) == 0:
@@ -137,8 +135,9 @@ def build_tree(rows):
     # Try partitioing the dataset on each of the unique attribute,
     # calculate the information gain,
     # and return the question that produces the highest gain.
-    gain, decision = find_best_split(rows)
 
+    gain, decision = find_best_split(rows)
+    print(gain)
     # Base case: no further info gain
     # Since we can ask no further questions,
     # we'll return a leaf.
@@ -170,14 +169,14 @@ def print_tree(node, spacing=""):
         return
 
     # Print the question at this node
-    print (spacing + str(node.question))
+    print(spacing + str(node.decision))
 
     # Call this function recursively on the true branch
-    print (spacing + '--> True:')
+    print(spacing + '--> True:')
     print_tree(node.true_branch, spacing + "  ")
 
     # Call this function recursively on the false branch
-    print (spacing + '--> False:')
+    print(spacing + '--> False:')
     print_tree(node.false_branch, spacing + "  ")
 
 def classify(row, node):
@@ -190,7 +189,7 @@ def classify(row, node):
     # Decide whether to follow the true-branch or the false-branch.
     # Compare the feature / value stored in the node,
     # to the example we're considering.
-    if node.prediction.match(row):
+    if node.decision.match(row):#modified
         return classify(row, node.true_branch)
     else:
         return classify(row, node.false_branch)
@@ -270,8 +269,11 @@ def main():
     dictionary = class_counts(x_inverse_left)
     print(dictionary)
     '''
-    my_tree = build_tree(x_inverse_right)
+    print(x_inverse_left)
+    print(x_inverse_right)
+    my_tree = build_tree(x_inverse_left)
     print_tree(my_tree)
+
     for row in x_inverse_right:
         print ("Actual: %s. Predicted: %s" %
                (row[-1], print_leaf(classify(row, my_tree))))
