@@ -256,3 +256,16 @@ class classifier:
                  s.append(words[sentence[i]-1])
 
         return s
+
+    def get_all_sentences(self, sentence_matrix):
+        nr, nc = sentence_matrix.shape
+        words = get_Allwords(self.word_id_mapping)
+        s = []
+        for i in range(nr):
+            sentence = []
+            for j in range(nc):
+                if sentence_matrix[i][j] != 0:
+                    sentence.append(words[sentence_matrix[i][j]-1])
+            s.append(sentence)
+
+        return s

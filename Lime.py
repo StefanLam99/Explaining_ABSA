@@ -69,7 +69,6 @@ def main():#initialisation of inputs:
             target_lime_word_len = np.tile(target_words_len[index],(num_samples))
             y_lime_true = np.tile(y_true[index],(num_samples,1))
 
-
             #predicting the perturbations
             predictions,probabilities = f.get_allProb(x_lime_left, x_lime_left_len, x_lime_right, x_lime_right_len,
                                        y_lime_true,target_lime_word, target_lime_word_len, batch_size, num_samples)
@@ -114,8 +113,6 @@ def main():#initialisation of inputs:
 
             print(fidelity_right)
             print(fidelity_left)
-
-
 
 
             results.write('Instance ' + str(index) +':' +'\n')
