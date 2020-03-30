@@ -83,5 +83,9 @@ print(probabilities)
 print(polarity)
 '''
 
+neg, neu, pos = get_polarityStats(predictions)
+print('pos: ' + str(pos) + ' neu: ' + str(neu) +' neg: ' + str(neg))
+print('pos: ' + str(pos/size) + ' neu: ' + str(neu/size) + ' neg: ' + str(neg/size))
+
 
 

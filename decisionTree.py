@@ -1,3 +1,4 @@
+#https://github.com/random-forests/tutorials/blob/master/decision_tree.py
 from __future__ import print_function
 from Lime import lime_perturbation
 from classifier import *
@@ -26,7 +27,7 @@ class Decision:
         return self.flag
 
     def __repr__(self):
-            return "Is %f inside instance x?" %(self.word)
+            return "Is %s inside instance x?" %(self.word)
 
 def split(rows, decision):
     true_rows, false_rows = [], []
@@ -69,37 +70,34 @@ def info_gain(left, right, current_uncertainty):
     p = float(len(left)) / (len(left) + len(right))
     return current_uncertainty - p * gini(left) - (1 - p) * gini(right)
 
-def find_best_split(rows):
+def find_best_split(rows, features):
     """Find the best question to ask by iterating over every feature / value
     and calculating the information gain."""
     best_gain = 0  # keep track of the best information gain
     best_decision = None  # keep train of the feature / value that produced it
     current_uncertainty = gini(rows)
-
     n_features = len(rows[0]) -1 # number of columns
 
     for col in range(n_features):  # for each feature
+        val = features[col]
+        #values = set([row[col] for row in rows])  # unique values in the column
 
-        values = set([row[col] for row in rows])  # unique values in the column
+        #for val in values:  # for each value
+        decision = Decision(col, val)
 
-        for val in values:  # for each value
-            decision = Decision(col, val)
+        # try splitting the dataset
+        true_rows, false_rows = split(rows, decision)
+        # Skip this split if it doesn't divide the
+        # dataset.
+        if len(true_rows) == 0 or len(false_rows) == 0:
+            continue
 
-            # try splitting the dataset
-            true_rows, false_rows = split(rows, decision)
-            # Skip this split if it doesn't divide the
-            # dataset.
-            if len(true_rows) == 0 or len(false_rows) == 0:
-                continue
+        # Calculate the information gain from this split
+        gain = info_gain(true_rows, false_rows, current_uncertainty)
 
-            # Calculate the information gain from this split
-            gain = info_gain(true_rows, false_rows, current_uncertainty)
 
-            # You actually can use '>' instead of '>=' here
-            # but I wanted the tree to look a certain way for our
-            # toy dataset.
-            if gain >= best_gain:
-                best_gain, best_decision = gain, decision
+        if gain >= best_gain:
+            best_gain, best_decision = gain, decision
 
     return best_gain, best_decision
 
@@ -125,7 +123,7 @@ class Decision_Node:
         self.true_branch = true_branch
         self.false_branch = false_branch
 
-def build_tree(rows):
+def build_tree(rows, features, depth):
     """Builds the tree.
     Rules of recursion: 1) Believe that it works. 2) Start by checking
     for the base case (no further information gain). 3) Prepare for
@@ -136,12 +134,11 @@ def build_tree(rows):
     # calculate the information gain,
     # and return the question that produces the highest gain.
 
-    gain, decision = find_best_split(rows)
-    print(gain)
+    gain, decision = find_best_split(rows, features)
     # Base case: no further info gain
     # Since we can ask no further questions,
     # we'll return a leaf.
-    if gain == 0:
+    if gain == 0 or depth == 5:
         return Leaf(rows)
 
     # If we reach here, we have found a useful feature / value
@@ -149,10 +146,10 @@ def build_tree(rows):
     true_rows, false_rows = split(rows, decision)
 
     # Recursively build the true branch.
-    true_branch = build_tree(true_rows)
+    true_branch = build_tree(true_rows, features, depth+1)
 
     # Recursively build the false branch.
-    false_branch = build_tree(false_rows)
+    false_branch = build_tree(false_rows, features, depth+1)
 
     # Return a Question node.
     # This records the best feature / value to ask at this point,
@@ -206,12 +203,8 @@ def print_leaf(counts):
 
 def data(year, model, case, index):
     """
-    Preprocesses data
-    :param year:
-    :param model:
-    :param case:
-    :param index:
-    :return:
+    Preprocesses data, where the "x-data" ccontains the "y-data" in the last column
+
     """
 
 
@@ -249,34 +242,61 @@ def data(year, model, case, index):
     predictions, probabilities = f.get_allProb(x_lime_left, x_lime_left_len, x_lime_right, x_lime_right_len,
                                                y_lime_true, target_lime_word, target_lime_word_len, batch_size,
                                                num_samples)
-
+    predictions = predictions.reshape((num_samples, 1))
+    predictions = predictions.astype(str)
+    #perturbed sentences
     sentences_left = np.array(f.get_all_sentences(x_lime_left))
     sentences_right = np.array(f.get_all_sentences(x_lime_right))
-    predictions = predictions.reshape(num_samples,1)
 
-    return predictions, np.concatenate((x_inverse_left,predictions),axis=1), sentences_left, \
-    np.concatenate((x_inverse_right,predictions),axis=1),sentences_right
+    def format_sentences(predictions, sentences, x_inverse):
+        n_features = len(x_inverse[0])
+        features = np.multiply(x_inverse, np.arange(1, n_features + 1))
+        sentence_matrix = []
+        for i, row in enumerate(features):
+            sentence = []
+            counter = 0
+            for j in range(n_features):
+                if (features[i][j] == j + 1):
+                    sentence.append(sentences[i][counter])
+                    counter += 1
+                else:
+                    sentence.append(None)
+            sentence.append(predictions[i][0])
+            sentence_matrix.append(sentence)
+        return sentence_matrix
+
+    # corresponding matrix representation
+    sentences_matrix_left = format_sentences(predictions, sentences_left, x_inverse_left)
+    sentences_matrix_right = format_sentences(predictions, sentences_right, x_inverse_right)
+
+
+    return predictions, np.concatenate((x_inverse_left, predictions),axis=1), sentences_matrix_left, \
+    np.concatenate((x_inverse_right,predictions),axis=1),sentences_matrix_right
+
+
+
 
 def main():
-    year = 2015
+    year = 2016
     model = 'test'
     case = 'all'  # correct, incorrect or nothing for all
-    index = 250
-    predictions, x_inverse_left, left_sentence, x_inverse_right, right_sentence = data(year, model, case, index=index)
-    '''
-    print(x_inverse_right)
-    print(right_sentence)
-    dictionary = class_counts(x_inverse_left)
-    print(dictionary)
-    '''
+    index = 10
+    predictions, x_inverse_left, left_sentences, x_inverse_right, right_sentences = data(year, model, case, index=index)
+    features_right = right_sentences[0]
+
+
+
     print(x_inverse_left)
     print(x_inverse_right)
-    my_tree = build_tree(x_inverse_left)
+    print(right_sentences)
+    print(predictions)
+    #Input are the left sentences
+    my_tree = build_tree(right_sentences, features_right, 0)
     print_tree(my_tree)
-
+    ''' 
     for row in x_inverse_right:
         print ("Actual: %s. Predicted: %s" %
                (row[-1], print_leaf(classify(row, my_tree))))
-
+'''
 if __name__ == '__main__':
     main()

@@ -269,3 +269,10 @@ class classifier:
             s.append(sentence)
 
         return s
+    def sentence_at(self, index):
+        left, _, right, _, _, target, _ = self.get_instance(index)
+        left = self.get_String_Sentence(left[0])
+        right = self.get_String_Sentence(right[0])
+        target = self.get_String_Sentence(target[0])
+
+        return left + target + list(reversed(right))
