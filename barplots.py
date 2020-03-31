@@ -47,3 +47,25 @@ ax.set_title('Predicted Label: Positive \n True Label: Positive')
 #
 plt.savefig('Olaf2016right.png', bbox_inches='tight')
 plt.show()'''
+
+def create_Limeplot(words, influences, type, save_path, predicted, true):
+    plt.rcdefaults()
+
+    fig, ax = plt.subplots()
+
+    components = {'Right Context': 'red', 'Left Context': 'blue'}
+    labels = list(components.keys())
+    handles = [plt.Rectangle((0, 0), 1, 1, color=components[label]) for label in labels]
+    plt.legend(handles, labels, loc='lower right')
+    plt.axvline(x=0, color='black')
+    y_pos = np.arange(len(words))
+
+
+    ax.barh(y_pos, influences, align='center', color=type)
+    ax.set_yticks(y_pos)
+    ax.set_yticklabels(words)
+    ax.invert_yaxis()  # labels read top-to-bottom
+    ax.set_xlabel('Influence')
+    ax.set_title('Predicted Label: ' + predicted + '\n True Label: ' + true)
+    plt.savefig( save_path + '.png', bbox_inches='tight')
+    plt.show()

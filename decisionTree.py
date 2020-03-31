@@ -3,7 +3,8 @@ from __future__ import print_function
 from Lime import lime_perturbation
 from classifier import *
 from sklearn.utils import check_random_state
-
+np.set_printoptions(threshold=sys.maxsize)
+MAX_ITEMS_TO_HANDLE = 500
 
 class Decision:
     def __init__(self, c, word):
@@ -27,7 +28,7 @@ class Decision:
         return self.flag
 
     def __repr__(self):
-            return "Is %s inside instance x?" %(self.word)
+            return (self.word)
 
 def split(rows, decision):
     true_rows, false_rows = [], []
@@ -108,7 +109,27 @@ class Leaf:
     """
 
     def __init__(self, rows):
+
         self.predictions = class_counts(rows)
+
+        # prediction based on the majority of the type
+        pos = -1
+        neu = -1
+        neg = -1
+        for key in self.predictions.keys():
+            if(key == '1.0'):
+                pos = self.predictions[key]
+            elif(key == '0.0'):
+                neu = self.predictions[key]
+            elif(key == '-1.0'):
+                neg = self.predictions[key]
+
+        temp = ['negative', 'neutral', 'positive']
+        index = np.argmax([neg, neu, pos])
+        self.prediction = temp[int(index)]
+
+
+
 
 class Decision_Node:
     """A Decision Node asks a question.
@@ -122,6 +143,58 @@ class Decision_Node:
         self.decision = decision
         self.true_branch = true_branch
         self.false_branch = false_branch
+
+
+class Tree:
+    def __init__(self, root):
+        self.root = root
+        self.paths = {'positive': [], 'neutral': [], 'negative': []} # all paths will be saved into this
+
+
+
+    def get_paths(self):
+        """
+        Helper function to get the paths
+        :param root: root of the tree as
+        :return: all the root-leaf paths with their respective label
+        """
+        root = self.root
+        path = []
+        pathlen = 0
+        self.traverse_tree(root, path, pathlen)
+        return self.paths
+
+    def traverse_tree(self, root, path, pathlen):
+        """
+        Traverses the tree to find all root-leaf paths
+        :param root:
+        :param path:
+        :param pathlen:
+        :return:
+        """
+        # Base case, stop the recursion if it is a leaf
+        if isinstance(root, Leaf):
+            temp = path.copy()
+            self.paths[root.prediction].append(temp)
+            return
+
+        # adding node
+        if(len(path) > pathlen):
+            path[pathlen] = root.decision
+        else:
+            path.append(root.decision)
+
+        pathlen += 1
+        self.traverse_tree(root.true_branch, path, pathlen)  # left child
+        path[pathlen-1] = 'not ' + str(root.decision)
+        self.traverse_tree(root.false_branch, path, pathlen)  # right child
+
+
+
+
+
+
+
 
 def build_tree(rows, features, depth):
     """Builds the tree.
@@ -138,7 +211,7 @@ def build_tree(rows, features, depth):
     # Base case: no further info gain
     # Since we can ask no further questions,
     # we'll return a leaf.
-    if gain == 0 or depth == 5:
+    if gain == 0 or depth == 3:
         return Leaf(rows)
 
     # If we reach here, we have found a useful feature / value
@@ -198,6 +271,9 @@ def print_leaf(counts):
     for lbl in counts.keys():
         probs[lbl] = str(int(counts[lbl] / total * 100)) + "%"
     return probs
+
+
+
 
 
 
@@ -280,7 +356,7 @@ def main():
     year = 2016
     model = 'test'
     case = 'all'  # correct, incorrect or nothing for all
-    index = 10
+    index = 4
     predictions, x_inverse_left, left_sentences, x_inverse_right, right_sentences = data(year, model, case, index=index)
     features_right = right_sentences[0]
 
@@ -291,8 +367,16 @@ def main():
     print(right_sentences)
     print(predictions)
     #Input are the left sentences
-    my_tree = build_tree(right_sentences, features_right, 0)
-    print_tree(my_tree)
+    root = build_tree(right_sentences, features_right, 0)
+    tree = Tree(root)
+    print_tree(root)
+    print(root.decision)
+    paths = tree.get_paths()
+    print(root)
+    print(list(paths.keys()))
+    print('positive paths: ' + str(paths['positive']))
+    print('negative paths:' + str(paths['negative']))
+    print('neutral paths:' + str(paths['neutral']))
     ''' 
     for row in x_inverse_right:
         print ("Actual: %s. Predicted: %s" %
