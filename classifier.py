@@ -13,7 +13,7 @@ class classifier:
         """
         self.input_file = input_file
         self.year = year
-        self.word_id_mapping, self.w2v = load_w2v("data/programGeneratedData/"+str(FLAGS.embedding_dim)+'embedding'+str(self.year)+".txt", FLAGS.embedding_dim)
+        self.word_id_mapping, self.w2v = load_w2v("data/programGeneratedData/"+ str(FLAGS.embedding_dim)+'embedding'+str(self.year)+".txt", FLAGS.embedding_dim)
 
         self.x_left, self.x_left_len, self.x_right, self.x_right_len, self.y_true, self.target_word, \
         self.target_words_len, _, _, _ = load_inputs_twitter(input_file, self.word_id_mapping, FLAGS.max_sentence_len,
@@ -238,7 +238,7 @@ class classifier:
         for i in range(len):
             sentence_embedding[:, i] = self.w2v[sentence[i], :]
             if(int(np.sum(sentence_embedding[:,i])) == 0):
-                sentence_embedding[:,i] = np.random.normal(loc=0, scale=0.05**2,size=(300)) #if word doesnt exist
+                sentence_embedding[:,i] = np.random.normal(loc=0, scale=0.05**2,size=(FLAGS.embedding_dim)) #if word doesnt exist
 
         return sentence_embedding
 
@@ -258,6 +258,11 @@ class classifier:
         return s
 
     def get_all_sentences(self, sentence_matrix):
+        """
+        Gets all the sentences in an id matrix to a list consiting of all string sentences
+        :param sentence_matrix: id matrix
+        :return: lists with all sentences
+        """
         nr, nc = sentence_matrix.shape
         words = get_Allwords(self.word_id_mapping)
         s = []

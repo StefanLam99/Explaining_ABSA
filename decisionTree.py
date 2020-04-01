@@ -3,8 +3,7 @@ from __future__ import print_function
 from Lime import lime_perturbation
 from classifier import *
 from sklearn.utils import check_random_state
-np.set_printoptions(threshold=sys.maxsize)
-MAX_ITEMS_TO_HANDLE = 500
+
 
 class Decision:
     def __init__(self, c, word):
@@ -124,7 +123,7 @@ class Leaf:
             elif(key == '-1.0'):
                 neg = self.predictions[key]
 
-        temp = ['negative', 'neutral', 'positive']
+        temp = ['-1', '0', '1']
         index = np.argmax([neg, neu, pos])
         self.prediction = temp[int(index)]
 
@@ -132,7 +131,7 @@ class Leaf:
 
 
 class Decision_Node:
-    """A Decision Node asks a question.
+    """A Decision Node with a decision (feature/word) on each node
     This holds a reference to the question, and to the two child nodes.
     """
 
@@ -148,7 +147,7 @@ class Decision_Node:
 class Tree:
     def __init__(self, root):
         self.root = root
-        self.paths = {'positive': [], 'neutral': [], 'negative': []} # all paths will be saved into this
+        self.paths = {'1': [], '0': [], '-1': []} # all paths will be saved into this
 
 
 
@@ -156,7 +155,7 @@ class Tree:
         """
         Helper function to get the paths
         :param root: root of the tree as
-        :return: all the root-leaf paths with their respective label
+        :return: all the root-leaf paths with their respective label, as a dicitonary
         """
         root = self.root
         path = []
@@ -180,9 +179,9 @@ class Tree:
 
         # adding node
         if(len(path) > pathlen):
-            path[pathlen] = root.decision
+            path[pathlen] = str(root.decision)
         else:
-            path.append(root.decision)
+            path.append(str(root.decision))
 
         pathlen += 1
         self.traverse_tree(root.true_branch, path, pathlen)  # left child
@@ -211,7 +210,7 @@ def build_tree(rows, features, depth):
     # Base case: no further info gain
     # Since we can ask no further questions,
     # we'll return a leaf.
-    if gain == 0 or depth == 3:
+    if gain == 0 or depth == 5:
         return Leaf(rows)
 
     # If we reach here, we have found a useful feature / value
@@ -254,7 +253,7 @@ def classify(row, node):
 
     # Base case: we've reached a leaf
     if isinstance(node, Leaf):
-        return node.predictions
+        return node.prediction
 
     # Decide whether to follow the true-branch or the false-branch.
     # Compare the feature / value stored in the node,
@@ -274,27 +273,14 @@ def print_leaf(counts):
 
 
 
-
-
-
-def data(year, model, case, index):
+def data(f, r, year, model, case, num_samples, batch_size, index):
     """
     Preprocesses data, where the "x-data" ccontains the "y-data" in the last column
 
     """
 
 
-    num_samples = 5000
-    batch_size = 500
-    r = check_random_state(2020)
-    if year == 2015:
-        input_file = 'data/programGeneratedData/300remainingtestdata2015.txt'
-        model_path = 'trainedModelOlaf/2015/-12800'
-    elif year == 2016:
-        input_file = 'data/programGeneratedData/300remainingtestdata2016.txt'
-        model_path = 'trainedModelOlaf/2016/-18800'
 
-    f = classifier(input_file=input_file, model_path=model_path, year=year)
     dict = f.get_Allinstances()
     x_left = dict['x_left']
     x_left_len = dict['x_left_len']
@@ -304,9 +290,10 @@ def data(year, model, case, index):
     target_words_len = dict['target_len']
     y_true = dict['y_true']
     true_label = dict['true_label']
-    pred = dict['pred']
     size = dict['size']
-
+    classifier_pred, prob = f.get_allProb(x_left, x_left_len, x_right, x_right_len, y_true, target_word, target_words_len, size,
+                               size)
+    #lime perturbations
     x_inverse_left, x_lime_left, x_lime_left_len = lime_perturbation(r, x_left[index], x_left_len[index], num_samples)
     x_inverse_right, x_lime_right, x_lime_right_len = lime_perturbation(r, x_right[index], x_right_len[index],
                                                                         num_samples)
@@ -346,7 +333,8 @@ def data(year, model, case, index):
     sentences_matrix_right = format_sentences(predictions, sentences_right, x_inverse_right)
 
 
-    return predictions, np.concatenate((x_inverse_left, predictions),axis=1), sentences_matrix_left, \
+
+    return classifier_pred[index], true_label[index], predictions, np.concatenate((x_inverse_left, predictions),axis=1), sentences_matrix_left, \
     np.concatenate((x_inverse_right,predictions),axis=1),sentences_matrix_right
 
 
@@ -357,7 +345,21 @@ def main():
     model = 'test'
     case = 'all'  # correct, incorrect or nothing for all
     index = 4
-    predictions, x_inverse_left, left_sentences, x_inverse_right, right_sentences = data(year, model, case, index=index)
+    num_samples = 5000
+    batch_size = 500
+    r = check_random_state(2020)
+    if year == 2015:
+        input_file = 'data/programGeneratedData/300remainingtestdata2015.txt'
+        model_path = 'trainedModelOlaf/2015/-12800'
+    elif year == 2016:
+        input_file = 'data/programGeneratedData/300remainingtestdata2016.txt'
+        model_path = 'trainedModelOlaf/2016/-18800'
+
+    f = classifier(input_file=input_file, model_path=model_path, year=year)
+    classifier_pred, true_label, predictions, x_inverse_left, left_sentences, x_inverse_right, right_sentences = data(f, r, year, model,
+                                                                                                     case, num_samples,
+                                                                                                     batch_size,
+                                                                                                     index=index)
     features_right = right_sentences[0]
 
 

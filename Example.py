@@ -7,9 +7,9 @@ import nltk
 input_file = 'data/programGeneratedData/300remainingtestdata2016.txt'
 model_path = 'trainedModelOlaf/2016/-18800'
 year = 2016
-#initialisation of object for year 2015:
-#input_file = 'data/programGeneratedData/300remainingtestdata2015.txt'
-#model_path = 'trainedModelOlaf/2015/-12800'
+
+input_file = 'data/programGeneratedData/768remainingtestdata2016.txt'
+model_path = 'trainedModelMaria2test/2016/-470'
 
 
 A = classifier(input_file, model_path, year) #A is our classifier
@@ -47,7 +47,7 @@ print(sentence_embedding)
 print(sentence_embedding.shape)
 print(A.w2v)
 print(A.word_id_mapping)
-
+''' 
 #Example 3: Getting the words as string from the id's
 
 words = get_Allwords(A.word_id_mapping)
@@ -74,18 +74,19 @@ print(A.x_right[4])
 
 
 
-''' 
 #Example 4: getting all the probabilities
 predictions, probabilities = A.get_allProb(A.x_left, A.x_left_len, A.x_right, A.x_right_len, A.y_true, A.target_word, A.target_words_len, 5,int(size))
 print(predictions)
 print(probabilities)
 
 print(polarity)
-'''
+
 
 neg, neu, pos = get_polarityStats(predictions)
 print('pos: ' + str(pos) + ' neu: ' + str(neu) +' neg: ' + str(neg))
 print('pos: ' + str(pos/size) + ' neu: ' + str(neu/size) + ' neg: ' + str(neg/size))
+
+'''
 
 
 
