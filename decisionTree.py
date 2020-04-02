@@ -376,9 +376,10 @@ def main():
     paths = tree.get_paths()
     print(root)
     print(list(paths.keys()))
-    print('positive paths: ' + str(paths['positive']))
-    print('negative paths:' + str(paths['negative']))
-    print('neutral paths:' + str(paths['neutral']))
+    print('positive paths: ' + str(paths['1']))
+    print('negative paths:' + str(paths['-1']))
+    print('neutral paths:' + str(paths['0']))
+    print(predictions)
     ''' 
     for row in x_inverse_right:
         print ("Actual: %s. Predicted: %s" %

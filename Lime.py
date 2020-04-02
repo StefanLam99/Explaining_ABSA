@@ -47,6 +47,9 @@ def main():#initialisation of inputs:
     #Start of LIME implementatino
     hit_left = np.array([])
     hit_right = np.array([])
+    fid_left = []
+    fid_right = []
+    fid_all = []
     left_coefs = []
     right_coefs = []
     left_words = []
@@ -100,22 +103,36 @@ def main():#initialisation of inputs:
             #fitting the regression model with a constant
             constant = np.ones((num_samples, 1))
             if(x_left_len[index] > 0):
-                model_left.fit(np.concatenate((constant, x_inverse_left),axis=1), predictions, sample_weight=weights_left)
+                xleft = np.concatenate((constant, x_inverse_left),axis=1)
+                model_left.fit(xleft , predictions, sample_weight=weights_left)
                 hit_left = np.append(hit_left,model_left.predict(np.concatenate((np.ones(1),x_inverse_left[0])).reshape(1,-1))[0])
                 fidelity_left = model_left.predict(np.concatenate((constant, x_inverse_left),axis=1))
             else:
-                model_left.fit(constant, predictions)
+                xleft = constant
+                model_left.fit(xleft, predictions)
                 hit_left = np.append(hit_left,model_left.predict(np.ones(1).reshape(1,-1))[0])
                 fidelity_left = model_left.predict(constant)
 
             if(x_right_len[index] > 0):
-                model_right.fit(np.concatenate((constant, x_inverse_right),axis=1), predictions, sample_weight=weights_right)
+                xright = np.concatenate((constant, x_inverse_right),axis=1)
+                model_right.fit(xright , predictions, sample_weight=weights_right)
                 hit_right = np.append(hit_right,model_right.predict(np.concatenate((np.ones(1),x_inverse_right[0])).reshape(1,-1))[0])
                 fidelity_right = model_right.predict(np.concatenate((constant, x_inverse_right),axis=1))
+                xall = np.concatenate((xleft, xright), axis=1)
+                coefsall = np.append(model_left.coef_, model_right.coef_)
+                fidelity_all = np.matmul(xall, coefsall)
             else:
-                model_right.fit(constant, predictions)
+                xright = constant
+                model_right.fit(xright, predictions)
                 hit_right = np.append(hit_right, model_right.predict(np.ones(1).reshape(1,-1))[0])
                 fidelity_right = model_right.predict(constant)
+                xall = xleft
+                coefsall = model_left.coef_
+                print(coefsall)
+                fidelity_all = np.matmul(xall, coefsall)
+
+
+
 
             #words:
             left_words.append(np.array(['C'] + f.get_String_Sentence(x_lime_left[0])))
@@ -127,6 +144,26 @@ def main():#initialisation of inputs:
             left_coefs.append(model_left.coef_)
             right_coefs.append(model_right.coef_)
             all_coefs.append(np.append(model_left.coef_, model_right.coef_))
+
+
+            #getting fidelity
+            fidelity_all[fidelity_all > 0] = '1.0'
+            fidelity_all[ fidelity_all <= 0] = '-1.0'
+            _, fidel = compare_preds(predictions, fidelity_all)
+            fid_all.append(fidel)
+
+            fidelity_left[fidelity_left > 0] = '1.0'
+            fidelity_left[ fidelity_left <= 0] = '-1.0'
+            _, fidel = compare_preds(predictions, fidelity_left)
+            fid_left.append(fidel)
+
+            fidelity_right[fidelity_right > 0] = '1.0'
+            fidelity_right[ fidelity_right <= 0] = '-1.0'
+            _, fidel = compare_preds(predictions, fidelity_right)
+            fid_right.append(fidel)
+
+
+
 
 
             results.write('Instance ' + str(index) +':' +'\n')
@@ -241,10 +278,14 @@ def main():#initialisation of inputs:
         hit_all = hit_left + hit_right
         hit_all[hit_all > 0] = 1
         hit_all[hit_all <= 0] = -1
-        correctAll, fidall = compare_preds(pred, hit_all)
-        results.write(str(fidall) + '\n')
+        correctAll, hitall = compare_preds(pred, hit_all)
+        results.write(str(hitall) + '\n')
         results.write('Hit Rate All measure:' + '\n')
-        results.write('Correct: ' + str(correctAll) + ' hit rate: ' + str(fidall))
+        results.write('Correct: ' + str(correctAll) + ' hit rate: ' + str(hitall) + '\n')
+        results.write('Fidelity All measure: ' + '\n')
+        mean = np.mean(fid_all)
+        std = np.std(fid_all)
+        results.write('Mean: ' + str(mean) + '  std: ' + str(std))
     #writing results for (W)SP
     with open(write_path + 'left' + '.txt', 'w') as results:
         for i in picked_instances_left:
@@ -273,10 +314,14 @@ def main():#initialisation of inputs:
 
         hit_left[hit_left>0] = 1
         hit_left[hit_left<=0] = -1
-        correctleft, fidleft = compare_preds(pred, hit_left)
+        correctleft, hitleft = compare_preds(pred, hit_left)
         results.write(str(hit_left) + '\n')
         results.write('Hit Rate Left measure:' + '\n')
-        results.write('Correct: ' + str(correctleft) + ' Hit rate: ' + str(fidleft))
+        results.write('Correct: ' + str(correctleft) + ' Hit rate: ' + str(hitleft) + '\n')
+        results.write('Fidelity Left measure: ' + '\n')
+        mean = np.mean(fid_left)
+        std = np.std(fid_left)
+        results.write('Mean: ' + str(mean) + '  std: ' + str(std))
     results.close()
     with open(write_path + 'right' + '.txt', 'w') as results:
         for i in picked_instances_right:
@@ -305,10 +350,14 @@ def main():#initialisation of inputs:
 
         hit_right[hit_right>0] = 1
         hit_right[hit_right<=0] = -1
-        correctright, fidright = compare_preds(pred, hit_right)
+        correctright, hitright = compare_preds(pred, hit_right)
         results.write(str(hit_right) + '\n')
         results.write('Hit Rate Right measure:' + '\n')
-        results.write('Correct: ' + str(correctright) + ' Hit rate: ' + str(fidright))
+        results.write('Correct: ' + str(correctright) + ' Hit rate: ' + str(hitright) + ' \n')
+        results.write('Fidelity Right measure: ' + '\n')
+        mean = np.mean(fid_right)
+        std = np.std(fid_right)
+        results.write('Mean: ' + str(mean) + '  std: ' + str(std))
 
     results.close()
 
