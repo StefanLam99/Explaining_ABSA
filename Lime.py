@@ -539,7 +539,7 @@ def lime_perturbation(random, x, x_len, num_samples):
     if(x_len>1):
         sample = random.randint(1, x_len, num_samples-1)
     elif(x_len==0):#if there is no context
-        return np.zeros((num_samples,FLAGS.max_sentence_len)).astype(int)\
+        return np.zeros((num_samples,x_len)).astype(int)\
             , np.zeros((num_samples,FLAGS.max_sentence_len)).astype(int)\
             , np.zeros(num_samples).astype(int)
     else:

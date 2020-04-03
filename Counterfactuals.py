@@ -143,8 +143,14 @@ def inDict(dict, key):
     return False
 
 def get_cf_instance_stats(f, cf_instance, index):
+    """
+    Gets the number of cf instances, and the number of correct predicted cf instances between f and c.
+    :param f: classifier
+    :param cf_instance: dict
+    :param index: index of the instance
+    :return:
+    """
     x_left, x_left_len, x_right, x_right_len, y_true, target_word, target_word_len = f.get_instance(index)
-    print(x_left.shape)
     r_len = int(x_right_len)
     l_len= int(x_left_len)
     nInstances = 0
@@ -152,6 +158,7 @@ def get_cf_instance_stats(f, cf_instance, index):
     for key in cf_instance.keys():
         if (len(cf_instance[key]) <= 0):
             break
+
         for instance in cf_instance[key]:
             nInstances += 1
             temp_instance = np.zeros(len(instance))
@@ -183,9 +190,8 @@ def main():
     year = 2016
     model = 'Maria' # or 'Olaf'
     model = 'Olaf'
-    index = 7
-    num_samples = 500
-    batch_size = 100
+    num_samples = 5000
+    batch_size = 200
     r = check_random_state(2020)
     if model == 'Olaf':
         write_path = 'data/Counterfactuals' + model + str(2016)
@@ -196,12 +202,13 @@ def main():
     f = classifier(model=model)
 
     correct_full = 0
+    correct_cf_instances = 0
+    size_cf_instances = 0
     fidelity = []
     fid_cf = []
     fid_tree = []
     size = f.size
     for index in range(size):
-        index = 7
 
         ## getting data and building trees
 
@@ -240,17 +247,11 @@ def main():
         correct_cf, size_cf = get_fid_instance(counterfactuals, full_sentences)
         if(size_cf >0):
             fid_cf.append(correct_cf/size_cf)
-        print(root_leaf_paths)
-        print(counterfactuals)
-        break
-    cf_instance = get_cfInstance(instance, counterfactuals)
-    print(cf_instance)
-    print(instance)
-    print(true_label)
-    correct, nInstances = get_cf_instance_stats(f, cf_instance, index)
-    print(correct)
-    print(nInstances)
 
+        cf_instance = get_cfInstance(instance, counterfactuals)
+        correct, nInstances = get_cf_instance_stats(f, cf_instance, index)
+        correct_cf_instances += correct
+        size_cf_instances += nInstances
 
 
 
@@ -276,9 +277,11 @@ def main():
 
 
     with open(write_path + '.txt', 'w') as results:
-        results.write('Hit Rate Full: ' + str(correct_full/size) + '\n')
+        results.write('Hit Rate Instances: ' + str(correct_full/size) + '\n')
+        results.write('Hit Rate Counterfactual Instances: ' + str(correct_cf_instances/size_cf_instances) + '\n')
         mean = np.mean(fidelity)
         std = np.std(fidelity)
+        results.write('\n')
         results.write('Fidelity Measure Decision Tree: ' + '\n')
         results.write('Mean: ' + str(mean) + '\n')
         results.write('Std: ' + str(std) + '\n')
