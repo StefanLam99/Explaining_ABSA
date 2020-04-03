@@ -5,31 +5,41 @@ import tensorflow as tf
 from loadData import getStatsFromFile
 class classifier:
 
-    def __init__(self, input_file, model_path, year):
+    def __init__(self, model):
         """
         Constructor to initialize a black box model
         :param input_file: he file containing the .txt data of the instances (reviews)
         :param model_path: the path to the trained model
         """
-        self.input_file = input_file
-        self.year = year
-        self.word_id_mapping, self.w2v = load_w2v("data/programGeneratedData/"+ str(FLAGS.embedding_dim)+'embedding'+str(self.year)+".txt", FLAGS.embedding_dim)
+        if model == 'Olaf':
+            write_path = 'data/Counterfactuals' + model + str(2016)
+            self.input_file = 'data/programGeneratedData/300remainingtestdata2016.txt'
+            self.model_path = 'trainedModelOlaf/2016/-18800'
+        elif model == "Maria":
+            write_path = 'data/Counterfactuals' + model + str(2016)
+            self.input_file = 'data/programGeneratedData/768remainingtestdata2016.txt'
+            self.model_path = 'trainedModelMaria/2016/-18800'
+
+        self.model = model
+        self.word_id_mapping, self.w2v = load_w2v("data/programGeneratedData/"+ str(FLAGS.embedding_dim)+'embedding2016.txt', FLAGS.embedding_dim)
 
         self.x_left, self.x_left_len, self.x_right, self.x_right_len, self.y_true, self.target_word, \
-        self.target_words_len, _, _, _ = load_inputs_twitter(input_file, self.word_id_mapping, FLAGS.max_sentence_len,
+        self.target_words_len, _, _, _ = load_inputs_twitter(self.input_file, self.word_id_mapping, FLAGS.max_sentence_len,
                                                              'TC', FLAGS.is_r == '1', FLAGS.max_target_len)
+        self.size, self.polarity = getStatsFromFile(self.input_file)
+        self.size = int(self.size)
         ##restoring the trained model
         # delete the current graph
         tf.reset_default_graph()
         # import the loaded graph
-        self.imported_graph = tf.train.import_meta_graph(model_path + '.meta')
+        self.imported_graph = tf.train.import_meta_graph(self.model_path + '.meta')
         config = tf.ConfigProto(allow_soft_placement=True)
         config.gpu_options.allow_growth = True
 
         self.sess = tf.Session(config=config)
         self.sess.run(tf.global_variables_initializer())
             # restore the saved variables
-        self.imported_graph.restore(self.sess, model_path)
+        self.imported_graph.restore(self.sess, self.model_path)
         self.graph = tf.get_default_graph()
 
         # setting keys for the feed dict
@@ -90,7 +100,7 @@ class classifier:
 
        ##getting prediction of instance
         prob = self.sess.run(self.prob,feed_dict=feed_dict)
-        prob = orderProb(prob,self.year)
+        prob = orderProb(prob,self.model)
         pred = np.argmax(prob[0]) - 1
 
         return pred, prob[0] #only get the relevant probability
@@ -100,11 +110,10 @@ class classifier:
         method to return all instances in a dictionary
         :return:
         """
-        size, polarity = getStatsFromFile(self.input_file)
-        size = int(size)
+
         correctSize = 0
         predictions, probabilities = self.get_allProb( self.x_left, self.x_left_len, self.x_right, self.x_right_len, self.y_true,
-                                                 self.target_word, self.target_words_len, size, size)
+                                                 self.target_word, self.target_words_len, self.size, self.size)
         correctDict = {
             'x_left': [],
             'x_left_len': [],
@@ -117,7 +126,7 @@ class classifier:
             'pred': []
 
         }
-        for i in range(size):
+        for i in range(int(self.size)):
                 correctDict['x_left'].append(self.x_left[i])
                 correctDict['x_right'].append(self.x_right[i])
                 correctDict['x_left_len'].append(self.x_left_len[i])
@@ -125,7 +134,7 @@ class classifier:
                 correctDict['target'].append(self.target_word[i])
                 correctDict['target_len'].append(self.target_words_len[i])
                 correctDict['y_true'].append(self.y_true[i])
-                correctDict['true_label'].append(int(polarity[i]))
+                correctDict['true_label'].append(int(self.polarity[i]))
                 correctDict['pred'].append(predictions[i])
                 correctSize +=1
         correctDict['size'] = correctSize
@@ -219,7 +228,7 @@ class classifier:
             ##getting prediction of instance
 
             prob = self.sess.run(self.prob, feed_dict=feed_dict)
-            prob = orderProb(prob, self.year)
+            prob = orderProb(prob, self.model)
             pred = np.argmax(prob, axis=1) - 1
             probabilities[batch_start:batch_end,:] = prob
             predictions[batch_start:batch_end] = pred

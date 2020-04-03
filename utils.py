@@ -649,20 +649,20 @@ def get_polarityStats(predictions):
 
     return neg, neu, pos
 
-def orderProb(probabilities, year):
+def orderProb(probabilities, model):
     """
     convert probs from the classifier into the right format: [neg,neu,pos]
     """
     nr, nc = probabilities.shape
     correctProb = np.zeros((nr,nc))
-    if year == 2016:
+    if model == 'Olaf':
         correctProb[:,0] = probabilities[:,0]
         correctProb[:,1] = probabilities[:,2]
         correctProb[:,2] = probabilities[:,1]
-    elif(year == 2015):
-        correctProb[:,0] = probabilities[:,0]
+    elif(model == 'Maria'):
+        correctProb[:,0] = probabilities[:,2]
         correctProb[:,1] = probabilities[:,1]
-        correctProb[:,2] = probabilities[:,2]
+        correctProb[:,2] = probabilities[:,0]
     return correctProb
 
 def compare_preds(pred1,pred2):

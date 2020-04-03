@@ -2,46 +2,153 @@ from classifier import *
 from config import *
 from loadData import getStatsFromFile
 from utils import compare_preds
-from sklearn.linear_model import LinearRegression, SGDClassifier
+from sklearn.linear_model import LinearRegression, LogisticRegression
 from sklearn.utils import check_random_state
 import time
 import numpy as np
 #np.set_printoptions(threshold=sys.maxsize)
-
-
-def main():#initialisation of inputs:
-    year = 2016
+def main2():
     model = 'Olaf'
+    isWSP = False
+    batch_size = 500 #we have to implement a batch size to get the predictions of the perturbed instances
+    num_samples = 10000 #has to be divisible by batch size
+    seed = 2020
+    width = 1.0
+    K = 5 # number of coefficients to check
+    B = 10 # number of instances to get
+    input_file = 'data/programGeneratedData/300remainingtestdata2016.txt'
+    model_path = 'trainedModelOlaf/2016/-18800'
+    f = classifier(input_file, model_path, model)
+    dict = f.get_Allinstances()
+    r = check_random_state(seed)
+    if(isWSP):
+        write_path = 'data/Lime/WSP' + model  + str(2016)
+    else:
+        write_path = 'data/Lime/SPfh' + model  + str(2016)
+
+    #Estimating Lime with multinominal logistic regression
+    fidelity = []
+    correct_hit = 0
+    x_left = dict['x_left']
+    x_left_len = dict['x_left_len']
+    x_right = dict['x_right']
+    x_right_len = dict['x_right_len']
+    target_word = dict['target']
+    target_words_len = dict['target_len']
+    y_true = dict['y_true']
+    true_label = dict['true_label']
+    pred = dict['pred']
+    size = dict['size']
+    left_words = []
+    right_words = []
+    all_words = []
+    targets = []
+    x_len = []
+    pred_b, prob = f.get_allProb(x_left, x_left_len, x_right, x_right_len, y_true, target_word, target_words_len, size, size)
+    with open(write_path + '.txt', 'w') as results:
+        for index in range(3,size):
+            x_inverse_left, x_lime_left, x_lime_left_len = lime_perturbation(r, x_left[index], x_left_len[index], num_samples)
+            x_inverse_right, x_lime_right, x_lime_right_len = lime_perturbation(r, x_right[index], x_right_len[index],
+                                                                                num_samples)
+
+            target_lime_word = np.tile(target_word[index], (num_samples, 1))
+            target_lime_word_len = np.tile(target_words_len[index], (num_samples))
+            y_lime_true = np.tile(y_true[index], (num_samples, 1))
+
+            # predicting the perturbations
+            pred_c, probabilities = f.get_allProb(x_lime_left, x_lime_left_len, x_lime_right, x_lime_right_len,
+                                                       y_lime_true, target_lime_word, target_lime_word_len, batch_size,
+                                                       num_samples)
+
+            # Getting the weights
+            x_w = np.append(x_left[index][0:x_left_len[index]], x_right[index][0:x_right_len[index]])
+            x_w_len = x_left_len[index] + x_right_len[index]
+            x_len.append(x_w_len)
+            x_lime_len = x_lime_left_len + x_lime_right_len
+            x_lime = np.concatenate((x_lime_left, x_lime_right), axis=1)
+            weights_all = get_weights(f, x_w, x_lime, x_w_len, x_lime_len, width)
+
+
+            model_all = LogisticRegression(multi_class='ovr', solver = 'newton-cg')
+
+
+            x_all = np.concatenate((x_inverse_left,x_inverse_right), axis=1)
+            model_all.fit(x_all, pred_c, sample_weight=weights_all)
+            yhat = model_all.predict(x_all)
+            _, acc = compare_preds(yhat, pred_c)
+            fidelity.append(acc)
+
+            # words:
+            left_words.append(f.get_String_Sentence(x_lime_left[0]))
+            right_words.append(f.get_String_Sentence(x_lime_right[0]))
+            all_words.append(f.get_String_Sentence(x_lime_left[0]) + f.get_String_Sentence(x_lime_right[0]))
+            targets.append(f.get_String_Sentence(target_word[index]))
+
+
+            coefs = model_all.coef_
+            intercept = model_all.intercept_
+            classes = model_all.classes_
+            print(coefs)
+            print(intercept)
+            results.write('Instance ' + str(index) + ':' + '\n')
+            results.write(
+                'True Label: ' + str(true_label[index-3]) + ', Predicted label: ' + str(int(pred[index])) + '\n')
+            results.write('Intercept: ' + str(intercept) + '\n')
+            results.write('Coefs: ' + str(coefs) + '\n')
+            results.write('Classes: ' + str(classes))
+            results.write('Left words: ' + str(left_words[index-3]) + '\n')
+            right_words[index-3].reverse()
+            results.write('Right words: ' + str(right_words[index-3]) + '\n')
+            results.write('\n')
+            results.write('All words: ' + str(all_words[index-3]) + '\n')
+            results.write('Target words: ' + str(targets[index-3]) + '\n')
+            results.write('\n')
+        results.close()
+
+    all_coefs_k = []
+    e_ij = []
+    all_words_k = []
+    dict_I = {}
+
+    for i in range(size):
+        if(K > int(x_len[i])):
+            K = int(x_len[i])
+
+
+    print(weights_all)
+    print(yhat)
+    print(model_all.coef_)
+    print(model_all.intercept_)
+    print(model_all.classes_)
+def main():#initialisation of inputs:
+
+    model = 'Olaf' # Or 'Maria'
     case = 'all' #correct, incorrect or nothing for all
     isWSP = False
     batch_size = 500 #we have to implement a batch size to get the predictions of the perturbed instances
     num_samples = 5000 #has to be divisible by batch size
     seed = 2020
     width = 0.5
+    r = check_random_state(seed)
     K = 5 # number of coefficients to check
     B = 10 # number of instances to get
 
-    if year == 2015:
-        input_file = 'data/programGeneratedData/300remainingtestdata2015.txt'
-        model_path = 'trainedModelOlaf/2015/-12800'
-    elif year==2016:
-        input_file = 'data/programGeneratedData/300remainingtestdata2016.txt'
-        model_path = 'trainedModelOlaf/2016/-18800'
 
-    f = classifier(input_file, model_path, year)
+    f = classifier( model)
     dict_correct, dict_incorrect = f.get_split_instances()
+    '''
     if case == 'correct':
         dict = dict_correct  # change depending on which case you want to know
     elif case == 'incorrect':
         dict = dict_incorrect
     else:
         dict = f.get_Allinstances()
-
+    '''
     if(isWSP):
-        write_path = 'data/Lime/WSP' + model + case + str(year)
+        write_path = 'data/Lime/WSP' + model + case + str(2016)
     else:
-        write_path = 'data/Lime/SP' + model + case + str(year)
-    r = check_random_state(seed)
+        write_path = 'data/Lime/SP' + model + case + str(2016)
+
 
 
     #Start of LIME implementatino
@@ -514,6 +621,7 @@ def countZeros(list):
 
 
 if __name__ == '__main__':
-    main()
+    #main()
+    main2()
 
 

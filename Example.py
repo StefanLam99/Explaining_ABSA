@@ -3,16 +3,16 @@ from loadData import getStatsFromFile
 import numpy as np
 import nltk
 #initialisation of object for year 2016:
-
+model = 'Olaf'
 input_file = 'data/programGeneratedData/300remainingtestdata2016.txt'
 model_path = 'trainedModelOlaf/2016/-18800'
-year = 2016
 
+model = 'Maria'
 input_file = 'data/programGeneratedData/768remainingtestdata2016.txt'
-model_path = 'trainedModelMaria2test/2016/-470'
+model_path = 'trainedModelMaria/2016/-18800'
 
 
-A = classifier(input_file, model_path, year) #A is our classifier
+A = classifier(model) #A is our classifier
 
 # Example 1: getting accuracy of the remaining test data
 

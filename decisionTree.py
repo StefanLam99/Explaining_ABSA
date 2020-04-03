@@ -273,7 +273,7 @@ def print_leaf(counts):
 
 
 
-def data(f, r, year, model, case, num_samples, batch_size, index):
+def data(f, r, num_samples, batch_size, index):
     """
     Preprocesses data, where the "x-data" ccontains the "y-data" in the last column
 
@@ -342,22 +342,16 @@ def data(f, r, year, model, case, num_samples, batch_size, index):
 
 def main():
     year = 2016
-    model = 'test'
+    model = 'Olaf' # or 'Maria'
     case = 'all'  # correct, incorrect or nothing for all
     index = 4
     num_samples = 5000
     batch_size = 500
     r = check_random_state(2020)
-    if year == 2015:
-        input_file = 'data/programGeneratedData/300remainingtestdata2015.txt'
-        model_path = 'trainedModelOlaf/2015/-12800'
-    elif year == 2016:
-        input_file = 'data/programGeneratedData/300remainingtestdata2016.txt'
-        model_path = 'trainedModelOlaf/2016/-18800'
 
-    f = classifier(input_file=input_file, model_path=model_path, year=year)
-    classifier_pred, true_label, predictions, x_inverse_left, left_sentences, x_inverse_right, right_sentences = data(f, r, year, model,
-                                                                                                     case, num_samples,
+
+    f = classifier( model=model)
+    classifier_pred, true_label, predictions, x_inverse_left, left_sentences, x_inverse_right, right_sentences = data(f, r, num_samples,
                                                                                                      batch_size,
                                                                                                      index=index)
     features_right = right_sentences[0]
