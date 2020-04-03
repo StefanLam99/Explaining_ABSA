@@ -1,6 +1,6 @@
 from decisionTree import *
 import time
-
+from utils import *
 
 
 def diff_sc(instance, q):
@@ -122,7 +122,7 @@ def get_fid_instance(rules, sentences):
         flag = False
         sentence = temp.copy()
         pred = sentence.pop()
-        for key in rules.keys():
+        for key in rules.keys(): #check for all paths the first one that is satisfied should be one
             for path in rules[key]:
                 if(match(sentence, path)):
                     size +=1
@@ -136,35 +136,72 @@ def get_fid_instance(rules, sentences):
                 break
     return correct, size
 
+def inDict(dict, key):
+    for keys in dict.keys():
+        if key == keys:
+            return True
+    return False
+
+def get_cf_instance_stats(f, cf_instance, index):
+    x_left, x_left_len, x_right, x_right_len, y_true, target_word, target_word_len = f.get_instance(index)
+    print(x_left.shape)
+    r_len = int(x_right_len)
+    l_len= int(x_left_len)
+    nInstances = 0
+    correct = 0
+    for key in cf_instance.keys():
+        if (len(cf_instance[key]) <= 0):
+            break
+        for instance in cf_instance[key]:
+            nInstances += 1
+            temp_instance = np.zeros(len(instance))
+
+            for i, word in enumerate(instance):
+                if(len(word.split()) <2 and inDict(f.word_id_mapping, word)):
+                    temp_instance[i] = f.word_id_mapping[word]
+                else:
+                    temp_instance[i] = 0
+
+            instance_left = np.zeros(FLAGS.max_sentence_len)
+            instance_left[0:l_len] = temp_instance[0:l_len]
+            instance_left = instance_left.reshape((1, FLAGS.max_sentence_len))
+
+            instance_right = np.zeros(FLAGS.max_sentence_len)
+            instance_right[0:r_len] = temp_instance[l_len:l_len+r_len]
+            instance_right = instance_right.reshape((1, FLAGS.max_sentence_len))
+
+            pred, _ = f.get_prob(instance_left, x_left_len, instance_right, x_right_len,y_true,target_word, target_word_len)
+            if(int(key) == pred):
+                correct +=1
+
+    return correct, nInstances
+
 
 
 
 def main():
     year = 2016
-    model = 'Maria'
-    case = 'all'  # correct, incorrect or nothing for all
+    model = 'Maria' # or 'Olaf'
+    model = 'Olaf'
     index = 7
     num_samples = 500
     batch_size = 100
     r = check_random_state(2020)
     if model == 'Olaf':
         write_path = 'data/Counterfactuals' + model + str(2016)
-        input_file = 'data/programGeneratedData/300remainingtestdata2016.txt'
-        model_path = 'trainedModelOlaf/2016/-18800'
     elif model == "Maria":
         write_path = 'data/Counterfactuals' + model + str(2016)
-        input_file = 'data/programGeneratedData/768remainingtestdata2016.txt'
-        model_path = 'trainedModelMaria/2016/-18800'
 
     begin = time.time()
-    f = classifier(input_file=input_file, model_path=model_path, model=model)
+    f = classifier(model=model)
 
     correct_full = 0
     fidelity = []
     fid_cf = []
     fid_tree = []
-    for index in range(295):
-
+    size = f.size
+    for index in range(size):
+        index = 7
 
         ## getting data and building trees
 
@@ -205,8 +242,14 @@ def main():
             fid_cf.append(correct_cf/size_cf)
         print(root_leaf_paths)
         print(counterfactuals)
-
-
+        break
+    cf_instance = get_cfInstance(instance, counterfactuals)
+    print(cf_instance)
+    print(instance)
+    print(true_label)
+    correct, nInstances = get_cf_instance_stats(f, cf_instance, index)
+    print(correct)
+    print(nInstances)
 
 
 
@@ -233,7 +276,7 @@ def main():
 
 
     with open(write_path + '.txt', 'w') as results:
-        results.write('Hit Rate Full: ' + str(correct_full/295) + '\n')
+        results.write('Hit Rate Full: ' + str(correct_full/size) + '\n')
         mean = np.mean(fidelity)
         std = np.std(fidelity)
         results.write('Fidelity Measure Decision Tree: ' + '\n')

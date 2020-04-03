@@ -25,9 +25,12 @@ for i in range(int(size)):
     x_left, x_left_len, x_right, x_right_len, y_true, target_word, target_words_len = A.get_instance(i)
     pred, prob = A.get_prob(x_left, x_left_len, x_right, x_right_len, y_true, target_word, target_words_len)
     predictions = np.append(predictions, pred)
+    print(pred)
+    print(type(pred))
     probabilities[i,:] = prob
     if(pred == int(polarity[i])):
         correct = np.append(correct,1)
+neg,neu, pos = get_polarityStats(predictions)
 print(probabilities)
 print('polarities: ')
 print(polarity)
@@ -35,8 +38,12 @@ print('predictions: ')
 print(predictions)
 
 acc = sum(correct)/size
+size = A.size - 2
 print('size of sample is: ' + str(size) + ', correct: ' + str(sum(correct)))
 print('accuracy: ' + str(acc))
+print('neg: ' + str(neg) + 'acc: ' + str(neg/size))
+print('neu: ' + str(neu) + 'acc: ' + str(neu/size))
+print('pos: ' + str(pos-2) + 'acc: ' + str((pos-2)/size))
 
 #Example 2: getting word embedding representation of words We don't want to remove the aspect in our perturbations
 #so only consider x_left and x_right for our sentences first
