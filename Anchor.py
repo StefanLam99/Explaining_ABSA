@@ -198,7 +198,7 @@ def perturb_sentence(text, present, n, neighbors, proba_change=0.5,
         raw = [' '.join(x) for x in raw]
     return raw, data
 
-def get_perturbations(pert_left, pert_right, b, i):
+def get_perturbations(pert_left, pert_right, b, i, num_samples):
     # pert_left is a boolean if the left part has to be perturbed
     # i is the index of the instance that has to be perturbed
 
@@ -218,8 +218,8 @@ def get_perturbations(pert_left, pert_right, b, i):
     nlp = en_core_web_lg.load()
     present = []
     neighbors = Neighbors(nlp)
-    num_samples = 2000
-    print(text)
+
+
     raw_data, data = perturb_sentence(text, present, num_samples, neighbors, proba_change=0.5,
                                       top_n=50, forbidden=[], forbidden_tags=['PRP$'],
                                       forbidden_words=['be'],
@@ -243,7 +243,6 @@ def get_perturbations(pert_left, pert_right, b, i):
         new_data = new_data.replace(" ino ", " 'ino ")
         output_data.append(new_data)
     perturbations = output_data
-    print(raw_data)
 
     return perturbations, instance_sentiment, text, b, x
 

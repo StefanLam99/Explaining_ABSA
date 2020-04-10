@@ -297,9 +297,10 @@ class classifier:
         x = np.zeros( FLAGS.max_sentence_len)
         for i, word in enumerate(sentence):
             if inDict(self.word_id_mapping, word):
-                x[i] = self.word_id_mapping[word]
+                x[i] = int(self.word_id_mapping[word])
             else:
                 x[i] = 0
 
         x = x.reshape((1,FLAGS.max_sentence_len))
+        x = np.array(x, int)
         return x

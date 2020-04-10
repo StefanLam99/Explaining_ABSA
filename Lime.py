@@ -6,6 +6,11 @@ from sklearn.linear_model import LinearRegression, LogisticRegression
 from sklearn.utils import check_random_state
 import time
 import numpy as np
+from Anchor import get_perturbations
+import warnings
+import os
+warnings.filterwarnings('ignore')
+os.environ['SPACY_WARNING_IGNORE'] = 'W008'
 #np.set_printoptions(threshold=sys.maxsize)
 def main2():
     begin = time.time()
@@ -43,9 +48,7 @@ def main2():
     left_words = []
     right_words = []
     all_words = []
-    neg_coefs_k = []
-    neu_coefs_k = []
-    pos_coefs_k = []
+
     targets = []
     x_len = []
     coefs = []
@@ -129,11 +132,12 @@ def main2():
             results.write('\n')
             results.write('________________________________________________________' + '\n')
 
+        neg_coefs_k = []
+        neu_coefs_k = []
+        pos_coefs_k = []
         all_coefs_k = []
         e_ij = []
         sum_coefs_k = []
-
-
 
         all_words_k = []
         dict_I = {}
@@ -153,17 +157,12 @@ def main2():
                 sum_coefs[k] += np.absolute(neg_coefs[k]) + np.absolute(pos_coefs[k]) + np.absolute(neg_coefs[k])
 
             coefs_maxargs = np.argpartition(sum_coefs, -K)[-K:]
-            print(K)
-            print(sum_coefs)
-            print(coefs_maxargs)
-            print(neg_coefs)
             neg_coefs_k.append(neg_coefs[coefs_maxargs])
             neu_coefs_k.append(neu_coefs[coefs_maxargs])
             pos_coefs_k.append(pos_coefs[coefs_maxargs])
 
 
             sum_coefs_k.append(sum_coefs[coefs_maxargs])
-            print(sum_coefs_k)
             e_ij.append(sum_coefs[coefs_maxargs])
 
             all_coefs_k.append([neg_coefs_k[i], neu_coefs_k[i], pos_coefs_k[i]])
@@ -227,48 +226,31 @@ def main2():
     end = time.time()
     print('It took: ' + str(end-begin) + ' Seconds')
 
-def main():#initialisation of inputs:
-
-    model = 'Olaf' # Or 'Maria'
-    case = 'all' #correct, incorrect or nothing for all
-    isWSP = False
-    batch_size = 500 #we have to implement a batch size to get the predictions of the perturbed instances
+def main3():
+    begin = time.time()
+    model = 'Olaf'
+    #isWSP = False
+    batch_size = 200 #we have to implement a batch size to get the predictions of the perturbed instances
     num_samples = 5000 #has to be divisible by batch size
     seed = 2020
-    width = 0.5
-    r = check_random_state(seed)
+    width = 1.0
     K = 5 # number of coefficients to check
     B = 10 # number of instances to get
 
-
-    f = classifier( model)
-    dict_correct, dict_incorrect = f.get_split_instances()
-    '''
-    if case == 'correct':
-        dict = dict_correct  # change depending on which case you want to know
-    elif case == 'incorrect':
-        dict = dict_incorrect
-    else:
-        dict = f.get_Allinstances()
+    f = classifier(model)
+    dict = f.get_Allinstances()
+    r = check_random_state(seed)
+    write_path ='data/Lime2/' + model + str(2016) + 'final'
     '''
     if(isWSP):
-        write_path = 'data/Lime/WSP' + model + case + str(2016)
+        write_path = 'data/Lime2/WSP' + model + str(2016) + 'final'
     else:
-        write_path = 'data/Lime/SP' + model + case + str(2016)
-
-
-
-    #Start of LIME implementatino
-    hit_left = np.array([])
-    hit_right = np.array([])
-    fid_left = []
-    fid_right = []
-    fid_all = []
-    left_coefs = []
-    right_coefs = []
-    left_words = []
-    right_words = []
-    targets = []
+        write_path = 'data/Lime2/SP' + model + str(2016) + 'final'
+    '''
+    #Estimating Lime with multinominal logistic regression
+    n_all_features = len(f.word_id_mapping)
+    fidelity = []
+    correct_hit = 0
     x_left = dict['x_left']
     x_left_len = dict['x_left_len']
     x_right = dict['x_right']
@@ -279,314 +261,245 @@ def main():#initialisation of inputs:
     true_label = dict['true_label']
     pred = dict['pred']
     size = dict['size']
-    pred, prob = f.get_allProb(x_left, x_left_len, x_right, x_right_len, y_true, target_word, target_words_len, size,
-                               size)
+    left_words = []
+    right_words = []
+    all_words = []
 
+    targets = []
+    x_len = []
+    coefs = []
+    size = 30
 
-    all_words =[]
-    all_coefs = []
-    start = time.time()
+    pred_b, prob = f.get_allProb(x_left, x_left_len, x_right, x_right_len, y_true, target_word, target_words_len, size, size)
+    original_x = []
     with open(write_path + '.txt', 'w') as results:
         for index in range(size):
-            #Getting the perturbations instances:
+            pertleft, instance_sentiment, text, _, x = get_perturbations(True, False, f, index, num_samples)
+            pertright, instance_sentiment, text, _, x = get_perturbations(False, True, f, index, num_samples)
+            orig_left_x = x_left[index]
+            orig_right_x = x_right[index]
+            Z = np.zeros((num_samples, n_all_features))
+            X = np.zeros((n_all_features))
+            print(orig_right_x)
+            print(orig_left_x)
+            X[orig_left_x] += 1
+            X[orig_right_x] += 1
+            X = X.reshape(1,-1)
+            predictions_f = []
+            x_lime = np.zeros((num_samples,x_left_len[index] + x_right_len[index]))
+            for i in range(num_samples):
 
-            x_inverse_left, x_lime_left, x_lime_left_len = lime_perturbation(r, x_left[index], x_left_len[index], num_samples)
-            x_inverse_right, x_lime_right, x_lime_right_len = lime_perturbation(r, x_right[index], x_right_len[index], num_samples)
-
-            target_lime_word = np.tile(target_word[index],(num_samples,1))
-            target_lime_word_len = np.tile(target_words_len[index],(num_samples))
-            y_lime_true = np.tile(y_true[index],(num_samples,1))
-
-            #predicting the perturbations
-            predictions,probabilities = f.get_allProb(x_lime_left, x_lime_left_len, x_lime_right, x_lime_right_len,
-                                       y_lime_true,target_lime_word, target_lime_word_len, batch_size, num_samples)
+                x_left_ids = f.to_input(pertleft[i].split())
+                x_right_ids = f.to_input(pertright[i].split())
+                x_lime[i,0:x_left_len[index]+x_right_len[index]] = np.append(x_left_ids[0][0:x_left_len[index]], x_right_ids[0][0:x_right_len[index]])
+                Z[i, x_left_ids] += 1
+                Z[i, x_right_ids] += 1
+                pred_f, _ = f.get_prob(x_left_ids, x[1], x_right_ids, x[3], x[4], x[5], x[6])
+                predictions_f.append(pred_f)
 
 
-            #Getting the weights for each feature for left and right context
-            weights_left = np.ones(num_samples)
-            weights_right = np.ones(num_samples)
-            if x_left_len[index] > 0:
-                weights_left = get_weights(f, x_left[index],x_lime_left,x_left_len[index], x_lime_left_len,width)
-            if x_right_len[index] > 0:
-                weights_right = get_weights(f, x_right[index],x_lime_right,x_right_len[index],x_lime_right_len,width)
 
-            #models
-            model_left = LinearRegression(fit_intercept=False)
-            model_right = LinearRegression(fit_intercept=False)
+            neg_labels = labels(predictions_f)
+            # Getting the weights
+            orig_x = np.append(orig_left_x[0:x_left_len[index]], orig_right_x[0:x_right_len[index]])
+            original_x.append(orig_x)
+            orig_x_len = int(x_left_len[index] + x_right_len[index])
+            x_len.append(orig_x_len)
+            z_len = np.tile(orig_x_len, num_samples)
+            x_lime = np.asarray(x_lime, int)
+            print(x_lime)
+            weights_all = get_weights(f, orig_x, x_lime, orig_x_len, z_len, width)
 
-            #fitting the regression model with a constant
-            constant = np.ones((num_samples, 1))
-            if(x_left_len[index] > 0):
-                xleft = np.concatenate((constant, x_inverse_left),axis=1)
-                model_left.fit(xleft , predictions, sample_weight=weights_left)
-                hit_left = np.append(hit_left,model_left.predict(np.concatenate((np.ones(1),x_inverse_left[0])).reshape(1,-1))[0])
-                fidelity_left = model_left.predict(np.concatenate((constant, x_inverse_left),axis=1))
+
+            model_all = LogisticRegression(multi_class='ovr', solver = 'newton-cg')
+
+            n_neg_labels = len(neg_labels)
+
+
+
+            if n_neg_labels > 0:
+                for label in neg_labels:
+                    predictions_f = np.append(predictions_f,label)
+                    Z = np.concatenate((Z, np.zeros((1,n_all_features))), axis = 0)
+                    weights_all = np.append(weights_all,0)
+
+                model_all.fit(Z, predictions_f, sample_weight=weights_all)
+                predictions_f = predictions_f[:-n_neg_labels]
+                Z = Z[:-n_neg_labels,:]
             else:
-                xleft = constant
-                model_left.fit(xleft, predictions)
-                hit_left = np.append(hit_left,model_left.predict(np.ones(1).reshape(1,-1))[0])
-                fidelity_left = model_left.predict(constant)
+                model_all.fit(Z, predictions_f, sample_weight=weights_all)
 
-            if(x_right_len[index] > 0):
-                xright = np.concatenate((constant, x_inverse_right),axis=1)
-                model_right.fit(xright , predictions, sample_weight=weights_right)
-                hit_right = np.append(hit_right,model_right.predict(np.concatenate((np.ones(1),x_inverse_right[0])).reshape(1,-1))[0])
-                fidelity_right = model_right.predict(np.concatenate((constant, x_inverse_right),axis=1))
-                xall = np.concatenate((xleft, xright), axis=1)
-                coefsall = np.append(model_left.coef_, model_right.coef_)
-                fidelity_all = np.matmul(xall, coefsall)
-            else:
-                xright = constant
-                model_right.fit(xright, predictions)
-                hit_right = np.append(hit_right, model_right.predict(np.ones(1).reshape(1,-1))[0])
-                fidelity_right = model_right.predict(constant)
-                xall = xleft
-                coefsall = model_left.coef_
-                print(coefsall)
-                fidelity_all = np.matmul(xall, coefsall)
+            yhat = model_all.predict(X)
+            print('aaaaaaaaaaaaaaaah')
+            print(yhat)
+            print(int(yhat))
+            print(pred_b[index])
+            print(int(pred_b[index]))
+            if(int(yhat[0]) == int(pred_b[index])):
+                correct_hit+=1
 
+            yhat = model_all.predict(Z)
 
+            _, acc = compare_preds(yhat, predictions_f)
+            fidelity.append(acc)
 
-
-            #words:
-            left_words.append(np.array(['C'] + f.get_String_Sentence(x_lime_left[0])))
-            right_words.append(np.array(['C'] + f.get_String_Sentence(x_lime_right[0])))
-            all_words.append(np.append(left_words[index], right_words[index]))
+            # words:
+            left_words.append(f.get_String_Sentence(orig_left_x))
+            right_words.append(f.get_String_Sentence(orig_right_x))
+            all_words.append(f.get_String_Sentence(orig_left_x) + f.get_String_Sentence(orig_right_x))
             targets.append(f.get_String_Sentence(target_word[index]))
 
-            #coeffs
-            left_coefs.append(model_left.coef_)
-            right_coefs.append(model_right.coef_)
-            all_coefs.append(np.append(model_left.coef_, model_right.coef_))
 
+            coefs.append(model_all.coef_)
+            intercept = model_all.intercept_
+            classes = model_all.classes_
 
-            #getting fidelity
-            fidelity_all[fidelity_all > 0] = '1.0'
-            fidelity_all[ fidelity_all <= 0] = '-1.0'
-            _, fidel = compare_preds(predictions, fidelity_all)
-            fid_all.append(fidel)
-
-            fidelity_left[fidelity_left > 0] = '1.0'
-            fidelity_left[ fidelity_left <= 0] = '-1.0'
-            _, fidel = compare_preds(predictions, fidelity_left)
-            fid_left.append(fidel)
-
-            fidelity_right[fidelity_right > 0] = '1.0'
-            fidelity_right[ fidelity_right <= 0] = '-1.0'
-            _, fidel = compare_preds(predictions, fidelity_right)
-            fid_right.append(fidel)
-
-
-
-
-
-            results.write('Instance ' + str(index) +':' +'\n')
-            results.write('True Label: ' + str(true_label[index]) + ', Predicted label: ' + str(int(pred[index])) + '\n')
-            results.write('Left coefs: ' + str(left_coefs[index]) + '\n')
+            results.write('Instance ' + str(index) + ':' + '\n')
+            results.write(
+                'True Label: ' + str(true_label[index]) + ', Predicted label: ' + str(int(pred[index])) + '\n')
+            results.write('\n')
+            results.write('Intercept: ' + str(intercept) + '\n')
+            results.write('\n')
             results.write('Left words: ' + str(left_words[index]) + '\n')
-            results.write('Right coefs: ' + str(right_coefs[index]) + '\n')
-            results.write('Right words: ' + str(right_words[index]) + '\n')
+            results.write('\n')
+            temp = right_words.copy()
+            temp[index].reverse()
+            results.write('Right words: ' + str(temp[index]) + '\n')
+            results.write('\n')
+            results.write('All words: ' + str(all_words[index]) + '\n')
             results.write('Target words: ' + str(targets[index]) + '\n')
             results.write('\n')
-    results.close()
-
-    ##getting the B instances according to (W)SP
-    left_coefs_k = []
-    right_coefs_k = []
-    all_coefs_k = []
-
-    e_ij_left = []
-    e_ij_right = []
-    e_ij = []
-
-    left_words_k = []
-    right_words_k = []
-    all_words_k = []
-
-    left_coefs = np.array(left_coefs)
-    right_coefs = np.array(right_coefs)
-    print(left_coefs)
+            results.write('________________________________________________________' + '\n')
 
 
-    left_words = np.array(left_words)
-    right_words = np.array(right_words)
+        neg_coefs_k = []
+        neu_coefs_k = []
+        pos_coefs_k = []
+        all_coefs_k = []
+        e_ij = []
+        sum_coefs_k = []
+        all_words_k = []
+        dict_I = {}
+
+        for i in range(size):
+            K = 4
+            if(K > int(x_len[i])):
+                K = int(x_len[i])
+
+            ##getting the B instances according to (W)SP
+            neg_coefs = coefs[i][0]
+            neu_coefs = coefs[i][1]
+            pos_coefs = coefs[i][2]
 
 
-    dict_I_left = {} #dict containing the global importance of all features
-    dict_I_right = {} #dict containing the global importance of all features
-    dict_I = {}
-    for i in range(size):
-        #coefficients are K or equal to the length of the sentence
-        if(K > int(x_left_len[i])):
-            lk = int(x_left_len[i])
-        else:
-            lk = K
+            sum_coefs = np.zeros(len(neg_coefs))
+            for j in original_x[i]:
+                sum_coefs[j] += np.absolute(neg_coefs[j]) + np.absolute(pos_coefs[j]) + np.absolute(neg_coefs[j])
 
-        if(K > int(x_right_len[i])):
-            rk = int(x_right_len[i])
-        else:
-            rk = K
+            coefs_maxargs = np.argpartition(sum_coefs, -K)[-K:]
+            neg_coefs_k.append(neg_coefs[coefs_maxargs])
+            neu_coefs_k.append(neu_coefs[coefs_maxargs])
+            pos_coefs_k.append(pos_coefs[coefs_maxargs])
 
-        l_coefs = np.absolute(left_coefs[i] - left_coefs[i][0]) #beta_j - beta_0
-        r_coefs = np.absolute(right_coefs[i] - right_coefs[i][0])
-        left_maxargs = np.argpartition(l_coefs, -lk)[-lk:]
-        right_maxargs = np.argpartition(r_coefs, -rk)[-rk:]
 
-        #the k |e_ij|'s
-        e_ij_left.append(l_coefs[left_maxargs])
-        e_ij_right.append(r_coefs[right_maxargs])
-        e_ij.append(np.append(l_coefs[left_maxargs], r_coefs[right_maxargs]))
-        #the normal coefficients
-        left_coefs_k.append(left_coefs[i][left_maxargs])
-        right_coefs_k.append(right_coefs[i][right_maxargs])
-        all_coefs_k.append(np.append(left_coefs[i][left_maxargs] - left_coefs[i][left_maxargs][0],
-                                     right_coefs[i][right_maxargs]-right_coefs[i][right_maxargs][0]))
+            sum_coefs_k.append(sum_coefs[coefs_maxargs])
 
-        left_words_k.append(left_words[i][left_maxargs])
-        right_words_k.append(right_words[i][right_maxargs])
-        all_words_k.append(np.append(left_words_k[i], right_words_k[i]))
+            e_ij.append(sum_coefs[coefs_maxargs])
 
-        #getting the global importance for each feature
-        for j, word in enumerate(left_words_k[i]):
-            if(inDict(dict_I_left,word)):
-               dict_I_left[word] += e_ij_left[i][j]
-            else:
-                dict_I_left[word] = e_ij_left[i][j]
+            all_coefs_k.append([neg_coefs_k[i], neu_coefs_k[i], pos_coefs_k[i]])
+            all_words_k.append(f.get_String_Sentence(coefs_maxargs))
+            #temp = np.array(all_words[i])
+            #all_words_k.append(temp[coefs_maxargs])
 
-        for j, word in enumerate(right_words_k[i]):
-            if (inDict(dict_I_right, word)):
-                dict_I_right[word] += e_ij_right[i][j]
-            else:
-                dict_I_right[word] = e_ij_right[i][j]
+            for j, word in enumerate(all_words_k[i]):
+                if(inDict(dict_I, word)):
+                    dict_I[word] += e_ij[i][j]
+                else:
+                    dict_I[word] = e_ij[i][j]
 
-        for j, word in enumerate(all_words_k[i]):
-            if (inDict(dict_I, word)):
-                dict_I[word] += e_ij[i][j]
-            else:
-                dict_I[word] = e_ij[i][j]
+            results.write('Instance: ' + str(i) + '\n')
+            results.write('k words: ' + str(all_words_k[i]) + '\n')
+            results.write('\n')
+            results.write('Neg coefs k: ' + str(neg_coefs_k[i]) + '\n')
+            results.write('\n')
+            results.write('Neu coefs k: ' + str(neu_coefs_k[i]) + '\n')
+            results.write('\n')
+            results.write('Pos coefs k: ' + str(pos_coefs_k[i]) + '\n')
+            results.write('\n')
+            results.write('________________________________________________________' + '\n')
+        results.close()
 
-    picked_instances_left = WSP(dict_I_left, left_words_k, left_coefs_k, B, isWSP)
-    picked_instances_right = WSP(dict_I_right, right_words_k, right_coefs_k, B, isWSP)
-    picked_instances_all = WSP(dict_I, all_words_k, all_coefs_k, B, isWSP)
+    picked_instances_all = WSP(dict_I, all_words_k, sum_coefs_k, B, True)
 
 
 
-    with open(write_path + 'all' + '.txt', 'w') as results:
+    with open(write_path + 'B_instances' + 'WSP.txt', 'w') as results:
         for i in picked_instances_all:
             results.write('picked instance ' + str(i) + ":")
             results.write(' True Label: ' + str(true_label[i]) + ', Predicted label: ' + str(int(pred[i])) + '\n')
-            results.write('Sentence: ' + str(left_words[i]) + str(targets[i]) + str(np.flip(right_words[i])) + '\n')
+            results.write('\n')
+            results.write('Sentence: ' + str(left_words[i]) + str(targets[i]) + str(right_words[i]) + '\n')
+            results.write('\n')
+            results.write('coefs: ' + str(coefs[i]) + '\n')
+            results.write('\n')
+            results.write('k words: ' + str(all_words_k[i]) + '\n')
+            results.write('\n')
+            results.write('Neg coefs k: ' + str(neg_coefs_k[i]) + '\n')
+            results.write('\n')
+            results.write('Neu coefs k: ' + str(neu_coefs_k[i]) + '\n')
+            results.write('\n')
+            results.write('Pos coefs k: ' + str(pos_coefs_k[i]) + '\n')
             results.write('\n')
 
-            results.write('K coefs: ' + str(all_coefs_k[i]) + '\n')
-            results.write('K influences: ' + str(np.array(all_coefs_k[i]) - all_coefs[i][0]) + '\n')
-            results.write('K words: ' + str(left_words_k[i]) + str(right_words_k[i]) + '\n')
-            results.write('\n')
-            results.write('coefs: ' + str(all_coefs[i]) + '\n')
-            results.write('words: ' + str(all_words[i]) + '\n')
 
-            results.write('\n')
+
             results.write('target: ' + str(targets[i]) + '\n')
             results.write('___________________________________________________________________' + '\n')
-            results.write('\n')
-        hit_all = hit_left + hit_right
-        hit_all[hit_all > 0] = 1
-        hit_all[hit_all <= 0] = -1
-        correctAll, hitall = compare_preds(pred, hit_all)
-        results.write(str(hitall) + '\n')
-        results.write('Hit Rate All measure:' + '\n')
-        results.write('Correct: ' + str(correctAll) + ' hit rate: ' + str(hitall) + '\n')
+        results.write('\n')
+        results.write('Hit Rate measure:' + '\n')
+        results.write('Correct: ' + str(correct_hit) + ' hit rate: ' + str(correct_hit / size) + '\n')
+        results.write('\n')
         results.write('Fidelity All measure: ' + '\n')
-        mean = np.mean(fid_all)
-        std = np.std(fid_all)
+        mean = np.mean(fidelity)
+        std = np.std(fidelity)
         results.write('Mean: ' + str(mean) + '  std: ' + str(std))
-    #writing results for (W)SP
-    with open(write_path + 'left' + '.txt', 'w') as results:
-        for i in picked_instances_left:
-            results.write('picked left instance ' + str(i) + ":")
+
+
+    picked_instances_all = WSP(dict_I, all_words_k, sum_coefs_k, B, False)
+
+    with open(write_path + 'B_instances' + 'SP.txt', 'w') as results:
+        for i in picked_instances_all:
+            results.write('picked instance ' + str(i) + ":")
             results.write(' True Label: ' + str(true_label[i]) + ', Predicted label: ' + str(int(pred[i])) + '\n')
-            results.write('Sentence: ' + str(left_words[i]) + str(targets[i]) + str(np.flip(right_words[i])) + '\n')
+            results.write('\n')
+            results.write('Sentence: ' + str(left_words[i]) + str(targets[i]) + str(right_words[i]) + '\n')
+            results.write('\n')
+            results.write('coefs: ' + str(coefs[i]) + '\n')
+            results.write('\n')
+            results.write('k words: ' + str(all_words_k[i]) + '\n')
+            results.write('\n')
+            results.write('Neg coefs k: ' + str(neg_coefs_k[i]) + '\n')
+            results.write('\n')
+            results.write('Neu coefs k: ' + str(neu_coefs_k[i]) + '\n')
+            results.write('\n')
+            results.write('Pos coefs k: ' + str(pos_coefs_k[i]) + '\n')
             results.write('\n')
 
-            results.write('K coefs left: ' + str(left_coefs_k[i]) + '\n')
-            results.write('K influences left: ' + str(np.array(left_coefs_k[i]) - left_coefs[i][0]) + '\n')
-            results.write('K words left: ' + str(left_words_k[i]) + '\n')
-            results.write('\n')
-            results.write('Left coefs: ' + str(left_coefs[i]) + '\n')
-            results.write('Left words: ' + str(left_words[i]) + '\n')
-            results.write('\n')
-            results.write('K coefs right: ' + str(right_coefs_k[i]) + '\n')
-            results.write('K influences right: ' + str(np.array(right_coefs_k[i]) - right_coefs[i][0]) + '\n')
-            results.write('K words right: ' + str(right_words_k[i]) + '\n')
-            results.write('\n')
-            results.write('Right coefs: ' + str(right_coefs[i]) + '\n')
-            results.write('Right words: ' + str(right_words[i]) + '\n')
-            results.write('\n')
+
+
             results.write('target: ' + str(targets[i]) + '\n')
             results.write('___________________________________________________________________' + '\n')
-            results.write('\n')
-
-        hit_left[hit_left>0] = 1
-        hit_left[hit_left<=0] = -1
-        correctleft, hitleft = compare_preds(pred, hit_left)
-        results.write(str(hit_left) + '\n')
-        results.write('Hit Rate Left measure:' + '\n')
-        results.write('Correct: ' + str(correctleft) + ' Hit rate: ' + str(hitleft) + '\n')
-        results.write('Fidelity Left measure: ' + '\n')
-        mean = np.mean(fid_left)
-        std = np.std(fid_left)
+        results.write('\n')
+        results.write('Hit Rate measure:' + '\n')
+        results.write('Correct: ' + str(correct_hit) + ' hit rate: ' + str(correct_hit / size) + '\n')
+        results.write('\n')
+        results.write('Fidelity All measure: ' + '\n')
+        mean = np.mean(fidelity)
+        std = np.std(fidelity)
         results.write('Mean: ' + str(mean) + '  std: ' + str(std))
-    results.close()
-    with open(write_path + 'right' + '.txt', 'w') as results:
-        for i in picked_instances_right:
-            results.write('picked right instance ' + str(i) + ":")
-            results.write(' True Label: ' + str(true_label[i]) + ', Predicted label: ' + str(int(pred[i])) + '\n')
-            results.write('Sentence: ' + str(left_words[i]) + str(targets[i]) + str(np.flip(right_words[i])) + '\n')
-            results.write('\n')
-
-            results.write('K coefs left: ' + str(left_coefs_k[i]) + '\n')
-            results.write('K influences left: ' + str(np.array(left_coefs_k[i]) - left_coefs[i][0]) + '\n')
-            results.write('K words left: ' + str(left_words_k[i]) + '\n')
-            results.write('\n')
-            results.write('Left coefs: ' + str(left_coefs[i]) + '\n')
-            results.write('Left words: ' + str(left_words[i]) + '\n')
-            results.write('\n')
-            results.write('K coefs right: ' + str(right_coefs_k[i]) + '\n')
-            results.write('K influences right: ' + str(np.array(right_coefs_k[i]) - right_coefs[i][0]) + '\n')
-            results.write('K words right: ' + str(right_words_k[i]) + '\n')
-            results.write('\n')
-            results.write('Right coefs: ' + str(right_coefs[i]) + '\n')
-            results.write('Right words: ' + str(right_words[i]) + '\n')
-            results.write('\n')
-            results.write('target: ' + str(targets[i]) + '\n')
-            results.write('___________________________________________________________________' + '\n')
-            results.write('\n')
-
-        hit_right[hit_right>0] = 1
-        hit_right[hit_right<=0] = -1
-        correctright, hitright = compare_preds(pred, hit_right)
-        results.write(str(hit_right) + '\n')
-        results.write('Hit Rate Right measure:' + '\n')
-        results.write('Correct: ' + str(correctright) + ' Hit rate: ' + str(hitright) + ' \n')
-        results.write('Fidelity Right measure: ' + '\n')
-        mean = np.mean(fid_right)
-        std = np.std(fid_right)
-        results.write('Mean: ' + str(mean) + '  std: ' + str(std))
-
-    results.close()
-
-
 
     end = time.time()
-    print("It took: " + str(end - start) + 'seconds')
-
-
-
-    print(picked_instances_left)
-    print(picked_instances_right)
-
-
-
+    print('It took: ' + str(end-begin) + ' Seconds')
 
 
 
@@ -600,6 +513,7 @@ def WSP(dict_I, words, coefs, B, isWSP):
     :return:
     """
     picked_instances = []
+    dict_I_copy = dict_I.copy()
 
     while(len(picked_instances) < B):
         c_max = -1
@@ -608,16 +522,16 @@ def WSP(dict_I, words, coefs, B, isWSP):
             c = 0
             if(isWSP):
                 for j, word in enumerate(sentence):
-                    c += coefs[i][j] * np.sqrt(dict_I[word]) #coverage with weights
+                    c += coefs[i][j] * np.sqrt(dict_I_copy[word]) #coverage with weights
             else:
                 for j, word in enumerate(sentence):
-                    c += np.sqrt(dict_I[word])  # coverage without weights SP
+                    c += np.sqrt(dict_I_copy[word])  # coverage without weights SP
             if(c > c_max): ## this is the max coverage according to a greedy algorithm
                 picked_instance = i
                 c_max = c
 
             for s in words[picked_instance]:
-                dict_I[s] = 0 ## we already incorporated these words in the picked instances
+                dict_I_copy[s] = 0 ## we already incorporated these words in the picked instances
 
         picked_instances.append(picked_instance)
 
@@ -733,9 +647,11 @@ def labels(pred):
             if int(e) == int(label):
                 labels.remove(e)
     return labels
-#if __name__ == '__main__':
+if __name__ == '__main__':
     #main()
     #main2()
+    main3()
+''' 
 model = 'Olaf'
 isWSP = False
 batch_size = 200 #we have to implement a batch size to get the predictions of the perturbed instances
@@ -791,13 +707,13 @@ pred_c, probabilities = f.get_allProb(x_lime_left, x_lime_left_len, x_lime_right
 for i in range(num_samples):
     pred, prob = f.get_prob(x_lime_left[i].reshape(1,-1), np.array([x_lime_left_len[i]]), x_lime_right[i].reshape(1,-1), np.array([x_lime_right_len[i]]),
                                   y_lime_true[i].reshape(1,-1), target_lime_word[i].reshape(1,-1), np.array([target_lime_word_len[i]]))
-    '''
+    
     print(y_lime_true[i])
     print(pred)
     print(x_lime_left[i])
     print(x_lime_right[i])
     print(target_lime_word[i])
-    '''
+    
 
 print(y_true[index])
 print(pred_c)
@@ -806,4 +722,4 @@ print(x_inverse_left)
 print(x_lime_left)
 print(x_inverse_right)
 print(x_lime_right)
-
+'''
