@@ -67,17 +67,20 @@ def get_cfInstance(instance, counterfactuals):
             temp = []
             for word in instance:
                 inCF = True
+                containNot = False
                 for cf_word in cf:
                     split_words = cf_word.split()
                     if len(split_words) >= 2:
-                        if(split_words[1] == word):
+                        containNot = True
+                        if (split_words[1] == word):
                             inCF = False
-                if(inCF):
+                if (inCF):
 
                     temp.append(word)
                 else:
                     temp.append('not ' + word)
-
+                if (containNot == False):
+                    break
             cf_instances[key] += [temp]
     return cf_instances
 def make_full_sentence(left_sentence, right_sentence):
@@ -142,7 +145,7 @@ def inDict(dict, key):
             return True
     return False
 
-def get_cf_instance_stats(f, cf_instance, index):
+def get_cf_instance_stats(f, cf_instance, index, pred_full):
     """
     Gets the number of cf instances, and the number of correct predicted cf instances between f and c.
     :param f: classifier
@@ -155,9 +158,13 @@ def get_cf_instance_stats(f, cf_instance, index):
     l_len= int(x_left_len)
     nInstances = 0
     correct = 0
+    changes = 0 #measures the number of changes in predictions because of the cf instance
+                #relative to the original instance
+
     for key in cf_instance.keys():
+
         if (len(cf_instance[key]) <= 0):
-            break
+            continue
 
         for instance in cf_instance[key]:
             nInstances += 1
@@ -178,25 +185,102 @@ def get_cf_instance_stats(f, cf_instance, index):
             instance_right = instance_right.reshape((1, FLAGS.max_sentence_len))
 
             pred, _ = f.get_prob(instance_left, x_left_len, instance_right, x_right_len,y_true,target_word, target_word_len)
+            print('pred_full: ' + str(pred_full))
+            print(pred)
+            print(key)
+            print(_)
             if(int(key) == pred):
+                print('yes!')
+                correct +=1
+            if(pred != int(pred_full)):
+                print('NOO')
+                changes += 1
+
+    return correct, nInstances, changes
+
+def rules_fid(f, rules, left_words, right_words, index):
+    x_left, x_left_len, x_right, x_right_len, y_true, target_word, target_word_len = f.get_instance(index)
+    pred_f, _ = f.get_prob(x_left, x_left_len, x_right, x_right_len, y_true, target_word, target_word_len)
+    r_len = int(x_right_len)
+    l_len= int(x_left_len)
+    nRules = 0
+    correct = 0
+    changes = 0
+    print(left_words)
+    print(right_words)
+    for key in rules.keys():
+        if(len(rules[key]) <= 0):
+            continue
+
+        for rule in rules[key]:
+            if(len(rule) <= 0):
+                continue
+            instance_left = np.zeros(FLAGS.max_sentence_len)
+            instance_right = np.zeros(FLAGS.max_sentence_len)
+            counterleft = 0
+            counterright = 0
+            nRules += 1
+            temp_rule = np.zeros(len(rule))
+            left = left_words.copy()
+            right = right_words.copy()
+            for i, word in enumerate(rule):
+                if len(word.split()) < 2:
+                    if(inList(left, word)): #its a left word
+                        left.remove(word)
+                        if(inDict(f.word_id_mapping, word)):
+                            instance_left[counterleft] = f.word_id_mapping[word]
+                        else:
+                            instance_left[counterleft] = 0
+                        counterleft += 1
+                    elif(inList(right, word)): #its a right word
+                         right.remove(word)
+                         if (inDict(f.word_id_mapping, word)):
+                            instance_right[counterright] = f.word_id_mapping[word]
+                         else:
+                            instance_right[counterright] = 0
+                         counterright += 1
+                else:#word is not in rule
+                    if(inList(left, word.split()[1])):
+                        left.remove(word.split()[1])
+                        instance_left[counterleft] = 0
+                        counterleft+=1
+                    elif(inList(right, word.split()[1])):
+                        right.remove(word.split()[1])
+                        instance_right[counterright] = 0
+                        counterright+=1
+            instance_left = instance_left.reshape((1, FLAGS.max_sentence_len))
+            instance_right = instance_right.reshape((1, FLAGS.max_sentence_len))
+            temp = int(key) + 1
+            true = np.zeros((1,3))
+            true[0][temp] = 1
+            pred, _ = f.get_prob(instance_left, x_left_len, instance_right, x_right_len, true, target_word,
+                                     target_word_len)
+            print(left_words)
+            print(right_words)
+            print(rule)
+            print(instance_left)
+            print(instance_right)
+            print(pred)
+            print(key)
+            print(_)
+            if(int(key) == pred):
+                print('yes!')
                 correct +=1
 
-    return correct, nInstances
-
-
+    return correct, nRules
 
 
 def main():
     year = 2016
-    model = 'Maria' # or 'Olaf'
-    model = 'Olaf'
+    #model = 'Maria' # or 'Olaf'
+    model = 'Maria'
     num_samples = 5000
     batch_size = 200
     r = check_random_state(2020)
     if model == 'Olaf':
-        write_path = 'data/Counterfactuals' + model + str(2016)
+        write_path = 'data/CounterfactualsZ' + model + str(num_samples)
     elif model == "Maria":
-        write_path = 'data/Counterfactuals' + model + str(2016)
+        write_path = 'data/CounterfactualsZ' + model + str(num_samples)
 
     begin = time.time()
     f = classifier(model=model)
@@ -204,10 +288,15 @@ def main():
     correct_full = 0
     correct_cf_instances = 0
     size_cf_instances = 0
+    changes = 0
     fidelity = []
     fid_cf = []
     fid_tree = []
     size = f.size
+    correct_cf = 0
+    correct_tree = 0
+    ncf = 0
+    ntree = 0
     for index in range(size):
 
         ## getting data and building trees
@@ -236,9 +325,11 @@ def main():
         fidelity.append(counter/num_samples)
 
         instance = full_sentences[0].copy()
-        instance.pop()  # get rid of the label
+        temp = instance.pop()  # get rid of the label
+
         root_leaf_paths = tree_full.get_paths()
-        counterfactuals = get_counterfactuals(instance, root_leaf_paths, true_label)
+        counterfactuals = get_counterfactuals(instance, root_leaf_paths, pred_full)
+        ''' 
         correct_tree, size_tree = get_fid_instance(root_leaf_paths, full_sentences)
 
         if(size_tree >0):
@@ -247,11 +338,32 @@ def main():
         correct_cf, size_cf = get_fid_instance(counterfactuals, full_sentences)
         if(size_cf >0):
             fid_cf.append(correct_cf/size_cf)
+        '''
+        left = left_sentences[0].copy()
+        left.pop()
+        right = right_sentences[0].copy()
+        right.pop()
+
+        cor, n = rules_fid(f, counterfactuals, left, right, index)
+        correct_cf += cor
+        ncf +=  n
+        cor, n = rules_fid(f, root_leaf_paths, left, right, index )
+        correct_tree += cor
+        ntree += n
+
 
         cf_instance = get_cfInstance(instance, counterfactuals)
-        correct, nInstances = get_cf_instance_stats(f, cf_instance, index)
+        correct, nInstances, change = get_cf_instance_stats(f, cf_instance, index, pred_full)
+        #correct, nInstances = rules_fid(f, counterfactuals, left, right, index)
         correct_cf_instances += correct
         size_cf_instances += nInstances
+        changes += change
+
+        print(correct_cf)
+        print(ncf)
+        print('lol')
+        print(correct_tree)
+        print(ntree)
 
 
 
@@ -279,6 +391,9 @@ def main():
     with open(write_path + '.txt', 'w') as results:
         results.write('Hit Rate Instances: ' + str(correct_full/size) + '\n')
         results.write('Hit Rate Counterfactual Instances: ' + str(correct_cf_instances/size_cf_instances) + '\n')
+        results.write('Size Counterfactual Instances: ' + str(size_cf_instances) + ' Correct: ' +str(correct_cf_instances) + '\n')
+        results.write('Number of changes in predictions: ' + str(changes)+ ' Percentage: ' + str(changes/size_cf_instances))
+
         mean = np.mean(fidelity)
         std = np.std(fidelity)
         results.write('\n')
@@ -286,14 +401,18 @@ def main():
         results.write('Mean: ' + str(mean) + '\n')
         results.write('Std: ' + str(std) + '\n')
         results.write('\n')
-        mean = np.mean(fid_tree)
-        std = np.std(fid_tree)
+        #mean = np.mean(fid_tree)
+        #std = np.std(fid_tree)
+        mean = correct_tree/ntree
+        std = 0
         results.write('Fidelity Measure Decision Tree Rules: ' + '\n')
         results.write('Mean: ' + str(mean) + '\n')
         results.write('Std: ' + str(std) + '\n')
         results.write('\n')
-        mean = np.mean(fid_cf)
-        std = np.std(fid_cf)
+        #mean = np.mean(fid_cf)
+        #std = np.std(fid_cf)
+        mean = correct_cf/ncf
+        std = 0
         results.write('Fidelity Measure Counterfactuals Rules: ' + '\n')
         results.write('Mean: ' + str(mean) + '\n')
         results.write('Std: ' + str(std) + '\n')
@@ -303,6 +422,60 @@ def main():
 
     print('It took: ' + str(seconds) + ' seconds')
 if __name__ == '__main__':
-    main()
+     main()
+
+year = 2016
+#model = 'Maria' # or 'Olaf'
+model = 'Olaf'
+num_samples = 5000
+batch_size = 200
+r = check_random_state(2020)
+if model == 'Olaf':
+    write_path = 'data/Counterfactuals' + model + str(num_samples) + 'd7'
+elif model == "Maria":
+    write_path = 'data/Counterfactuals' + model + str(num_samples)
+
+begin = time.time()
+f = classifier(model=model)
+
+correct_full = 0
+correct_cf_instances = 0
+size_cf_instances = 0
+changes = 0
+fidelity = []
+fid_cf = []
+fid_tree = []
+size = f.size
+
+index=4
+
+## getting data and building trees
+
+classifier_pred, true_label, pred_c, x_inverse_left, left_sentences, x_inverse_right, \
+right_sentences = data(f, r, num_samples,batch_size,index=index)
+
+
+
+#full
+full_sentences = make_full_sentence(left_sentences, right_sentences)
+features_full = full_sentences[0]
+root_full = build_tree(full_sentences, features_full, 0)
+tree_full = Tree(root_full)
+pred_full = classify(full_sentences[0], root_full)
+instance = full_sentences[0].copy()
+root_leaf_paths = tree_full.get_paths()
+counterfactuals = get_counterfactuals(instance, root_leaf_paths, pred_full)
+cf_instance = get_cfInstance(instance, counterfactuals)
+print(full_sentences)
+print(counterfactuals)
+print(cf_instance)
+print(root_leaf_paths)
+print(left_sentences[0])
+print(right_sentences[0])
+print(type(left_sentences[0]))
+
+
+
+
 
 

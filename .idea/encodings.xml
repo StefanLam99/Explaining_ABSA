@@ -5,8 +5,6 @@
     <file url="file://$PROJECT_DIR$/OntologyReasoner.py" charset="windows-1252" />
     <file url="file://$PROJECT_DIR$/config.py" charset="windows-1252" />
     <file url="file://$PROJECT_DIR$/data" charset="windows-1252" />
-    <file url="file://$PROJECT_DIR$/data/Lime/plots/Olaf2016left.png" charset="UTF-8" />
-    <file url="file://$PROJECT_DIR$/data/Lime/plots/Olaf2016right.png" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/data/programGeneratedData/768embedding2016.txt" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/data/programGeneratedData/768remainingtestdata2016.txt" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/data/programGeneratedData/768testdata2016.txt" charset="UTF-8" />
@@ -23,6 +21,7 @@
     <file url="file://$PROJECT_DIR$/nn_layer.py" charset="windows-1252" />
     <file url="file://$PROJECT_DIR$/prepareBERT.py" charset="windows-1252" />
     <file url="file://$PROJECT_DIR$/requirements.txt" charset="windows-1252" />
+    <file url="file://$PROJECT_DIR$/testAnchor.py" charset="windows-1252" />
     <file url="file://$PROJECT_DIR$/utils.py" charset="windows-1252" />
   </component>
 </project>

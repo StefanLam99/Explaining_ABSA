@@ -29,7 +29,7 @@ def main(_):
     runCABASC = False
     runLCRROT = False
     runLCRROTINVERSE = False
-    runLCRROTALT = True #Olaf model
+    runLCRROTALT = False #Olaf model
     runSVM = False
     runLCRROTALT_v4 = False  # Maria Model
     weightanalysis = False

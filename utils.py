@@ -680,3 +680,15 @@ def compare_preds(pred1,pred2):
     accuracy = correct/size1
     print("accuracy is: " + str(correct/size1))
     return correct, accuracy
+
+def inList(list, element):
+    for e in list:
+        if(element == e):
+            return True
+    return False
+
+def inDict(dict, key):
+    for keys in dict.keys():
+        if key == keys:
+            return True
+    return False

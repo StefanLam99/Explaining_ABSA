@@ -209,6 +209,7 @@ class classifier:
         """
         probabilities = np.zeros((num_samples,FLAGS.n_class))
         predictions = np.zeros(num_samples)
+
         for i in range(int(num_samples/batch_size)):
             batch_start = i*batch_size
             batch_end = (i+1)*batch_size
@@ -232,6 +233,7 @@ class classifier:
             pred = np.argmax(prob, axis=1) - 1
             probabilities[batch_start:batch_end,:] = prob
             predictions[batch_start:batch_end] = pred
+
 
         return predictions, probabilities
 
@@ -262,7 +264,7 @@ class classifier:
         s = []
         for i in range(len(sentence)):
             if sentence[i] != 0:
-                 s.append(words[sentence[i]-1])
+                 s.append(words[int(sentence[i])-1])
 
         return s
 
@@ -290,3 +292,14 @@ class classifier:
         target = self.get_String_Sentence(target[0])
 
         return left + target + list(reversed(right))
+
+    def to_input(self, sentence):
+        x = np.zeros( FLAGS.max_sentence_len)
+        for i, word in enumerate(sentence):
+            if inDict(self.word_id_mapping, word):
+                x[i] = self.word_id_mapping[word]
+            else:
+                x[i] = 0
+
+        x = x.reshape((1,FLAGS.max_sentence_len))
+        return x
