@@ -3,7 +3,7 @@ from __future__ import print_function
 from Lime import lime_perturbation
 from classifier import *
 from sklearn.utils import check_random_state
-
+from Anchor import get_perturbations
 
 class Decision:
     def __init__(self, c, word):
@@ -51,9 +51,6 @@ def class_counts(rows):
 
 def gini(rows):
     """Calculate the Gini Impurity for a list of rows.
-    There are a few different ways to do this, I thought this one was
-    the most concise. See:
-    https://en.wikipedia.org/wiki/Decision_tree_learning#Gini_impurity
     """
     counts = class_counts(rows)
     impurity = 1
@@ -127,7 +124,8 @@ class Leaf:
         index = np.argmax([neg, neu, pos])
         self.prediction = temp[int(index)]
 
-
+    def __repr__(self):
+            return ('leaf ' + str(self.prediction))
 
 
 class Decision_Node:
@@ -187,6 +185,22 @@ class Tree:
         self.traverse_tree(root.true_branch, path, pathlen)  # left child
         path[pathlen-1] = 'not ' + str(root.decision)
         self.traverse_tree(root.false_branch, path, pathlen)  # right child
+
+    def get_path(self, row, node, path):
+
+        # Base case: we've reached a leaf
+        if isinstance(node, Leaf):
+            return path, node.prediction
+
+        # Decide whether to follow the true-branch or the false-branch.
+        # Compare the feature / value stored in the node,
+        # to the example we're considering.
+        if node.decision.match(row):  # modified
+            path.append(node.decision)
+            return self.get_path(row, node.true_branch, path)
+        else:
+            path.append('not ' + str(node.decision))
+            return self.get_path(row, node.false_branch, path)
 
 
 
@@ -275,12 +289,9 @@ def print_leaf(counts):
 
 def data(f, r, num_samples, batch_size, index):
     """
-    Preprocesses data, where the "x-data" ccontains the "y-data" in the last column
+    Preprocesses data for uniform sampling, where the "x-data" ccontains the "y-data" in the last column
 
     """
-
-
-
     dict = f.get_Allinstances()
     x_left = dict['x_left']
     x_left_len = dict['x_left_len']
@@ -334,10 +345,83 @@ def data(f, r, num_samples, batch_size, index):
 
 
 
+
     return classifier_pred[index], true_label[index], predictions, np.concatenate((x_inverse_left, predictions),axis=1), sentences_matrix_left, \
     np.concatenate((x_inverse_right,predictions),axis=1),sentences_matrix_right
 
+def data_POS(f, num_samples, index):
+    """
+    Preprocesses data for POS sampling, where the "x-data" ccontains the "y-data" in the last column
 
+    """
+    n_all_features = len(f.word_id_mapping)
+    dict = f.get_Allinstances()
+    x_left = dict['x_left']
+    x_left_len = dict['x_left_len']
+    x_right = dict['x_right']
+    x_right_len = dict['x_right_len']
+    target_word = dict['target']
+    target_words_len = dict['target_len']
+    y_true = dict['y_true']
+    true_label = dict['true_label']
+    size = dict['size']
+    pred_f, prob = f.get_allProb(x_left, x_left_len, x_right, x_right_len, y_true, target_word, target_words_len, size,
+                               size)
+
+    pertleft, instance_sentiment, text, b, x = get_perturbations(True, False, f, index, num_samples)
+    pertright, instance_sentiment, text, b, x = get_perturbations(False, True, f, index, num_samples)
+
+    prediction = []
+    set_features = set()
+
+    prediction.append(pred_f[index])
+    set_features.update(f.get_String_Sentence(x_left[index]))
+    set_features.update(f.get_String_Sentence(x_right[index]))
+
+    for i in range(1,num_samples):
+
+        set_features.update(pertleft[i].split())
+        set_features.update(pertright[i].split())
+        x_lefts = f.to_input(pertleft[i].split())
+
+
+        s = f.get_String_Sentence(x_lefts[0])
+
+        x_rights = f.to_input(pertright[i].split())
+        pred, prob = b.get_prob(x_lefts, x[1], x_rights, x[3], x[4], x[5], x[6])
+        prediction.append(pred)
+
+    prediction = np.array(prediction).astype(float)
+    prediction = prediction.reshape((num_samples, 1))
+    predictions = prediction.astype(str)
+    set_features = [feature for feature in set_features]
+    sentence_matrix = []
+
+    #first be the real instance
+
+    words_in_sentence = f.get_String_Sentence(x_left[index]) + f.get_String_Sentence(x_right[index])
+    sentence = make_pos_sentence(words_in_sentence, set_features)
+    sentence.append(pred_f[index])
+    sentence_matrix.append(sentence)
+
+    #rest of sample
+    for i in range(1, num_samples):
+
+        words_in_sentence = pertleft[i].split() + pertright[i].split()
+        sentence = make_pos_sentence(words_in_sentence, set_features)
+        sentence.append(predictions[i][0])
+        sentence_matrix.append(sentence)
+
+    return pred_f[index], true_label[index], predictions, sentence_matrix, set_features
+
+def make_pos_sentence(string_sentence, set_features):
+    sentence = [None] * len(set_features)
+    for word in string_sentence:
+        for j, feature in enumerate(set_features):
+            if word == feature:
+                sentence[j] = word
+                break
+    return sentence
 
 
 def main():
@@ -374,10 +458,59 @@ def main():
     print('negative paths:' + str(paths['-1']))
     print('neutral paths:' + str(paths['0']))
     print(predictions)
+    a = classify(right_sentences[3], root)
+    path = []
+    path.append(root)
+    path, pred = tree.get_path(right_sentences[4], root, [])
+    print(root.decision)
+    print(a)
+    print(right_sentences[4])
+    print(path)
+    print(pred)
     ''' 
     for row in x_inverse_right:
         print ("Actual: %s. Predicted: %s" %
                (row[-1], print_leaf(classify(row, my_tree))))
 '''
+
 if __name__ == '__main__':
-    main()
+ #   main()
+    print('d')
+
+
+num_samples = 500
+f = classifier('Olaf')
+index = 4
+pred_f, true_label, predictions, sentence_matrix, set_features = data_POS(f, num_samples, index)
+
+root = build_tree(sentence_matrix, set_features, 0)
+tree = Tree(root)
+print_tree(root)
+
+paths = tree.get_paths()
+print(sentence_matrix)
+print(paths)
+path = tree.get_path(sentence_matrix[0], root, [])
+print(path)
+print([word for word in sentence_matrix[0] if word != None])
+test = make_pos_sentence(['the', 'is', 'belligerent', 'to', 'guests', 'that', 'have', 'a', 'complaint'], set_features)
+path = tree.get_path(test, root, [])
+print(test)
+print(path)
+
+''' 
+print(set_features)
+print(true_label)
+print(pred_f)
+print(predictions)
+print(f.sentence_at(index))
+
+get_predStats(predictions)
+path = tree.get_path(sentence_matrix[0], root, [])
+print(path)
+print(sentence_matrix[0])
+print([word for word in sentence_matrix[0] if word != None])
+
+'''
+
+

@@ -692,3 +692,20 @@ def inDict(dict, key):
         if key == keys:
             return True
     return False
+
+def get_predStats(predictions):
+    size = 0
+    neg = 0
+    neu = 0
+    pos = 0
+    for pred in predictions:
+        size += 1
+        if int(float(pred)) == 1:
+            pos +=1
+        elif int(float(pred)) == -1:
+            neg +=1
+        else:
+            neu += 1
+    print('Size is: ' + str(size))
+    print('neg: ' + str(neg) + ' neu: ' + str(neu) + ' pos: ' + str(pos))
+    return neg, neu, pos, size
