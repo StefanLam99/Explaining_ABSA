@@ -480,7 +480,7 @@ if __name__ == '__main__':
 
 num_samples = 500
 f = classifier('Olaf')
-index = 4
+index = 24
 pred_f, true_label, predictions, sentence_matrix, set_features = data_POS(f, num_samples, index)
 
 root = build_tree(sentence_matrix, set_features, 0)
@@ -498,13 +498,12 @@ path = tree.get_path(test, root, [])
 print(test)
 print(path)
 
-''' 
 print(set_features)
 print(true_label)
 print(pred_f)
 print(predictions)
 print(f.sentence_at(index))
-
+''' 
 get_predStats(predictions)
 path = tree.get_path(sentence_matrix[0], root, [])
 print(path)
@@ -512,5 +511,7 @@ print(sentence_matrix[0])
 print([word for word in sentence_matrix[0] if word != None])
 
 '''
+'''
 
 
+'''

@@ -9,6 +9,7 @@ np.random.seed(2020)
 #from np.magic import np
 import en_core_web_lg
 import en_core_web_sm
+
 import os
 os.environ['SPACY_WARNING_IGNORE'] = 'W008'
 
@@ -197,6 +198,7 @@ def perturb_sentence(text, present, n, neighbors, proba_change=0.5,
     else:
         raw = [' '.join(x) for x in raw]
     return raw, data
+
 
 def get_perturbations(pert_left, pert_right, b, i, num_samples):
     # pert_left is a boolean if the left part has to be perturbed

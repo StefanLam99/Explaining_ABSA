@@ -433,7 +433,7 @@ def main_pos():
 
     #model = 'Maria' # or 'Olaf'
     model = 'Olaf'
-    num_samples = 2000
+    num_samples = 5000
 
     write_path = 'data/Counterfactuals/' + model + str(num_samples)
 
@@ -452,64 +452,74 @@ def main_pos():
     correct_tree = 0
     ncf = 0
     ntree = 0
-    size = 30
-    for index in range(size):
 
-        ## getting data and building trees
-        #pred_c is prediction of the decision tree for the local instances
-        print('hello')
-        pred_f, true_label, pred_c, sentence_matrix, set_features  = data_POS(f, num_samples, index=index)
+    with open(write_path + 'paths.txt', 'w') as results:
+        for index in range(size):
+            print('Current Instance: ' + str(index))
+            print('Current Runtime: ' + str(time.time() - begin))
+            ## getting data and building trees
+            #pred_c is prediction of the decision tree for the local instances
+            pred_f, true_label, pred_c, sentence_matrix, set_features  = data_POS(f, num_samples, index=index)
 
+            #full
+            root_full = build_tree(sentence_matrix, set_features, 0)
+            tree_full = Tree(root_full)
 
+            pred_orig = classify(sentence_matrix[0], root_full)
+            if (pred_orig == str(int(pred_f))):
+                correct_orig += 1
 
-        #full
+            counter = 0
+            for i, sentence in enumerate(sentence_matrix):
+                pred = classify(sentence, root_full)
+                if(int(pred) == int(float(pred_c[i]))):
+                    counter +=1
 
-        root_full = build_tree(sentence_matrix, set_features, 0)
-        tree_full = Tree(root_full)
+            fidelity.append(counter/num_samples)
 
-        pred_orig = classify(sentence_matrix[0], root_full)
-        if (pred_orig == str(int(pred_f))):
-            correct_orig += 1
+            instance = [word for word in sentence_matrix[0] if word != None]
+            temp = instance.pop()  # get rid of the label
 
-        counter = 0
-        for i, sentence in enumerate(sentence_matrix):
-            pred = classify(sentence, root_full)
-            if(int(pred) == int(float(pred_c[i]))):
-                counter +=1
+            root_leaf_paths = tree_full.get_paths()
+            counterfactuals = get_counterfactuals(instance, root_leaf_paths, pred_orig)
+            print(counterfactuals)
+            correct_tree, size_tree = get_fid_instance(root_leaf_paths, sentence_matrix)
 
-        fidelity.append(counter/num_samples)
+            if(size_tree >0):
+                fid_tree.append(correct_tree/size_tree)
 
-        instance = [word for word in sentence_matrix[0] if word != None]
-        temp = instance.pop()  # get rid of the label
-
-        root_leaf_paths = tree_full.get_paths()
-        counterfactuals = get_counterfactuals(instance, root_leaf_paths, pred_orig)
-        print(counterfactuals)
-        correct_tree, size_tree = get_fid_instance(root_leaf_paths, sentence_matrix)
-
-        if(size_tree >0):
-            fid_tree.append(correct_tree/size_tree)
-
-        correct_cf, size_cf = get_fid_instance(counterfactuals, sentence_matrix)
-        if(size_cf >0):
-            fid_cf.append(correct_cf/size_cf)
+            correct_cf, size_cf = get_fid_instance(counterfactuals, sentence_matrix)
+            if(size_cf >0):
+                fid_cf.append(correct_cf/size_cf)
 
 
 
-        print(instance)
-        cf_instance = get_cfInstance(instance, counterfactuals)
-        print(cf_instance)
-        correct, nInstances, change = get_cf_instance_stats(f, cf_instance, index, pred_orig)
-        #correct, nInstances = rules_fid(f, counterfactuals, left, right, index)
-        correct_cf_instances += correct
-        size_cf_instances += nInstances
-        changes += change
+            print(instance)
+            cf_instance = get_cfInstance(instance, counterfactuals)
+            print(cf_instance)
+            correct, nInstances, change = get_cf_instance_stats(f, cf_instance, index, pred_orig)
+            #correct, nInstances = rules_fid(f, counterfactuals, left, right, index)
+            correct_cf_instances += correct
+            size_cf_instances += nInstances
+            changes += change
 
-        print(correct_cf)
-        print(ncf)
-        print('lol')
-        print(correct_tree)
-        print(ntree)
+
+            orig_path = tree_full.get_path(sentence_matrix[0], root_full, [])
+            orig_instance = [word for word in sentence_matrix[0] if word != None]
+            results.write('Instance: ' + str(index) + '\n')
+            results.write('\n')
+            s = f.sentence_at(index)
+            results.write('Sentence: ' + str(s) +'\n')
+            results.write('\n')
+            results.write('Original Instance: ' + str(orig_instance) + '\n')
+            results.write('\n')
+            results.write('Original path: ' + str(orig_path) + '\n')
+            results.write('\n')
+            results.write('Counterfactuals: ' + str(counterfactuals) + '\n')
+            results.write('________________________________________________________________________' +'\n')
+
+        results.close()
+
 
 
 
@@ -534,9 +544,10 @@ def main_pos():
 
 
 
-    with open(write_path + '.txt', 'w') as results:
+    with open(write_path + 'measures.txt', 'w') as results:
         results.write('Hit Rate Instances: ' + str(correct_orig/size) + '\n')
         results.write('Hit Rate Counterfactual Instances: ' + str(correct_cf_instances/size_cf_instances) + '\n')
+        results.write('\n')
         results.write('Size Counterfactual Instances: ' + str(size_cf_instances) + ' Correct: ' +str(correct_cf_instances) + '\n')
         results.write('Number of changes in predictions: ' + str(changes)+ ' Percentage: ' + str(changes/size_cf_instances))
 

@@ -751,10 +751,10 @@ pizza ' s
 try the $T$ !
 pizza ensalata
 1
-the $T$ are not huge and the crust is thin…keep that in mind when you ' re ordering .
+the $T$ are not huge and the crust is thin keep that in mind when you ' re ordering .
 pizza ' s
 0
-the pizza ' s are not huge and the $T$ is thin…keep that in mind when you ' re ordering .
+the pizza ' s are not huge and the $T$ is thin keep that in mind when you ' re ordering .
 crust
 0
 the $T$ is sinful .

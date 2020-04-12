@@ -12,7 +12,7 @@ import os
 warnings.filterwarnings('ignore')
 os.environ['SPACY_WARNING_IGNORE'] = 'W008'
 #np.set_printoptions(threshold=sys.maxsize)
-def main2():
+def main_uni():
     begin = time.time()
     model = 'Maria'
     isWSP = False
@@ -226,7 +226,7 @@ def main2():
     end = time.time()
     print('It took: ' + str(end-begin) + ' Seconds')
 
-def main3():
+def main_pos():
     begin = time.time()
     model = 'Olaf'
     #isWSP = False
@@ -649,8 +649,8 @@ def labels(pred):
     return labels
 if __name__ == '__main__':
     #main()
-    #main2()
-    main3()
+    #main_uni()
+    main_pos()
 ''' 
 model = 'Olaf'
 isWSP = False
