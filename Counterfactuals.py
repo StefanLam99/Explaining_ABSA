@@ -1,7 +1,7 @@
 from decisionTree import *
 import time
 from utils import *
-
+import en_core_web_lg
 
 def diff_sc(instance, q):
     """
@@ -435,10 +435,12 @@ def main_pos():
     model = 'Olaf'
     num_samples = 5000
 
-    write_path = 'data/Counterfactuals/' + model + str(num_samples)
+    write_path = 'data/Counterfactuals/test' + model + str(num_samples)
 
     begin = time.time()
     f = classifier(model=model)
+    nlp = en_core_web_lg.load()
+    neighbors = Neighbors(nlp)
 
     correct_orig = 0
     correct_cf_instances = 0
@@ -452,6 +454,7 @@ def main_pos():
     correct_tree = 0
     ncf = 0
     ntree = 0
+    nlp = en_core_web_lg.load()
 
     with open(write_path + 'paths.txt', 'w') as results:
         for index in range(size):
@@ -459,7 +462,7 @@ def main_pos():
             print('Current Runtime: ' + str(time.time() - begin))
             ## getting data and building trees
             #pred_c is prediction of the decision tree for the local instances
-            pred_f, true_label, pred_c, sentence_matrix, set_features  = data_POS(f, num_samples, index=index)
+            pred_f, true_label, pred_c, sentence_matrix, set_features  = data_POS(f, num_samples, index, neighbors)
 
             #full
             root_full = build_tree(sentence_matrix, set_features, 0)

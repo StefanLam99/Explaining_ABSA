@@ -3,8 +3,8 @@ from __future__ import print_function
 from Lime import lime_perturbation
 from classifier import *
 from sklearn.utils import check_random_state
-from Anchor import get_perturbations
-
+from Anchor import get_perturbations, Neighbors
+import en_core_web_lg
 class Decision:
     def __init__(self, c, word):
         self.c = c
@@ -349,7 +349,7 @@ def data(f, r, num_samples, batch_size, index):
     return classifier_pred[index], true_label[index], predictions, np.concatenate((x_inverse_left, predictions),axis=1), sentences_matrix_left, \
     np.concatenate((x_inverse_right,predictions),axis=1),sentences_matrix_right
 
-def data_POS(f, num_samples, index):
+def data_POS(f, num_samples, index, neighbors):
     """
     Preprocesses data for POS sampling, where the "x-data" ccontains the "y-data" in the last column
 
@@ -368,8 +368,8 @@ def data_POS(f, num_samples, index):
     pred_f, prob = f.get_allProb(x_left, x_left_len, x_right, x_right_len, y_true, target_word, target_words_len, size,
                                size)
 
-    pertleft, instance_sentiment, text, b, x = get_perturbations(True, False, f, index, num_samples)
-    pertright, instance_sentiment, text, b, x = get_perturbations(False, True, f, index, num_samples)
+    pertleft, instance_sentiment, text, b, x = get_perturbations(True, False, neighbors ,f,index, num_samples)
+    pertright, instance_sentiment, text, b, x = get_perturbations(False, True, neighbors ,f ,index,  num_samples)
 
     prediction = []
     set_features = set()
@@ -477,7 +477,7 @@ if __name__ == '__main__':
  #   main()
     print('d')
 
-
+''' 
 num_samples = 500
 f = classifier('Olaf')
 index = 24
@@ -503,7 +503,7 @@ print(true_label)
 print(pred_f)
 print(predictions)
 print(f.sentence_at(index))
-''' 
+
 get_predStats(predictions)
 path = tree.get_path(sentence_matrix[0], root, [])
 print(path)

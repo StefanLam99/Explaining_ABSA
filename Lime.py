@@ -6,9 +6,10 @@ from sklearn.linear_model import LinearRegression, LogisticRegression
 from sklearn.utils import check_random_state
 import time
 import numpy as np
-from Anchor import get_perturbations
+from Anchor import get_perturbations, Neighbors
 import warnings
 import os
+import en_core_web_lg
 warnings.filterwarnings('ignore')
 os.environ['SPACY_WARNING_IGNORE'] = 'W008'
 #np.set_printoptions(threshold=sys.maxsize)
@@ -236,11 +237,12 @@ def main_pos():
     width = 1.0
     K = 5 # number of coefficients to check
     B = 10 # number of instances to get
-
+    nlp = en_core_web_lg.load()
+    neighbors = Neighbors(nlp)
     f = classifier(model)
     dict = f.get_Allinstances()
     r = check_random_state(seed)
-    write_path ='data/Lime2/' + model + str(2016) + 'final'
+    write_path ='data/Lime2/test' + model + str(2016) + 'final'
     '''
     if(isWSP):
         write_path = 'data/Lime2/WSP' + model + str(2016) + 'final'
@@ -274,14 +276,12 @@ def main_pos():
     original_x = []
     with open(write_path + '.txt', 'w') as results:
         for index in range(size):
-            pertleft, instance_sentiment, text, _, x = get_perturbations(True, False, f, index, num_samples)
-            pertright, instance_sentiment, text, _, x = get_perturbations(False, True, f, index, num_samples)
+            pertleft, instance_sentiment, text, _, x = get_perturbations(True, False, neighbors, f, index, num_samples)
+            pertright, instance_sentiment, text, _, x = get_perturbations(False, True, neighbors, f, index, num_samples)
             orig_left_x = x_left[index]
             orig_right_x = x_right[index]
             Z = np.zeros((num_samples, n_all_features))
             X = np.zeros((n_all_features))
-            print(orig_right_x)
-            print(orig_left_x)
             X[orig_left_x] += 1
             X[orig_right_x] += 1
             X = X.reshape(1,-1)
@@ -307,7 +307,7 @@ def main_pos():
             x_len.append(orig_x_len)
             z_len = np.tile(orig_x_len, num_samples)
             x_lime = np.asarray(x_lime, int)
-            print(x_lime)
+
             weights_all = get_weights(f, orig_x, x_lime, orig_x_len, z_len, width)
 
 
@@ -330,14 +330,12 @@ def main_pos():
                 model_all.fit(Z, predictions_f, sample_weight=weights_all)
 
             yhat = model_all.predict(X)
-            print('aaaaaaaaaaaaaaaah')
-            print(yhat)
-            print(int(yhat))
-            print(pred_b[index])
-            print(int(pred_b[index]))
+
             if(int(yhat[0]) == int(pred_b[index])):
                 correct_hit+=1
-
+            print('Current instance: ' + str(index))
+            print('Correct hit: ' + str(correct_hit))
+            print('Current runtime: ' + str(time.time() - begin) + ' seconds')
             yhat = model_all.predict(Z)
 
             _, acc = compare_preds(yhat, predictions_f)
