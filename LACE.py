@@ -5,25 +5,32 @@ def main():
     model = 'Olaf'
     if model == 'Olaf':
         write_path = 'data/LACE/LACE_fidelityComputationsTEST' + model + str(2016)
+        #write_path = 'data/LACE/LACE_fidelityComputationsPOS' + model + str(2016)
         input_file = 'data/programGeneratedData/300remainingtestdata2016.txt'
     elif model == "Maria":
         write_path = 'data/LACE/LACE_fidelityComputationsTEST' + model + str(2016)
+        #write_path = 'data/LACE/LACE_fidelityComputationsPOS' + model + str(2016)
         input_file = 'data/programGeneratedData/768remainingtestdata2016.txt'
 
     B = classifier(model)
     size, polarity = getStatsFromFile(input_file)  # polarity is a vector with the classifications of the instances
     predictions = np.array([])
     probabilities = np.zeros((int(size), 3))
-    r = check_random_state(2020)
-    num_samples = 5000
-    batch_size = 200
+
+    nlp = en_core_web_lg.load()
+    neighbors = Neighbors(nlp)
+
     important_words = np.zeros((int(size), 3))
     instance_pred_diff = np.zeros((int(size), 3))
     #fidelity_scores = np.array([])
     fidelity_scores = np.zeros((int(size), 1))
+    fidelity_chosen_rules = np.zeros((int(size), 1))
     begin = time.time()
     with open(write_path + '.txt', 'w') as results:
-        for test_index in range(28, 30):
+        for test_index in range(7, 8):
+            r = check_random_state(2020)
+            num_samples = 5000
+            batch_size = 200
             # range(149, 150) range(255, 256) + range(218, 219) + range(260, 261))
             print("Instance: ", test_index)
             x_left, x_left_len, x_right, x_right_len, y_true, target_word, target_words_len = B.get_instance(test_index)
@@ -35,15 +42,12 @@ def main():
            # print("Before omission: (left and right)", x_left, x_right)
             s = B.get_String_Sentence(B.x_left[test_index])
             t = B.get_String_Sentence(B.x_right[test_index])
+            sentence = s + t
             print("Left and right sentence part: ", s, t)
             print("Now we draw the tree: ")
             # DRAWING TREE
-            classifier_pred, true_label, pred_c, x_inverse_left, left_sentences, x_inverse_right, right_sentences = data(
-                B, r, num_samples, batch_size, test_index)
-            pred_f, true_label, pred_c, sentence_matrix, set_features = data_POS(f, num_samples, index=index)
-            #full_sentences = make_full_sentence(left_sentences, right_sentences)
-            #features_full = full_sentences[0]
-            #root_full = build_tree(full_sentences, features_full, 0)
+            pred_f, true_label, pred_c, sentence_matrix, set_features = data_POS(B, num_samples, test_index,neighbors)
+
             root_full = build_tree(sentence_matrix, set_features, 0)
             tree_full = Tree(root_full)
             #print_tree(root_full)
@@ -51,7 +55,7 @@ def main():
             paths, path_labels = get_tree_paths(root_leaf_paths)
 
             print("Paths before formatting: ", paths)
-            temp_subsets = get_subsets(paths)
+            temp_subsets = get_subsets(paths, sentence)
             print("Paths after formatting: ", temp_subsets)
             n_subsets = len(temp_subsets)
             neighbor_probs = np.zeros((int(n_subsets), 3))
@@ -86,6 +90,7 @@ def main():
 
             #print(len(neighbor_probs))
             n_sentiments = 3
+            fidelity_instance = get_instance_fid(rule_predictions, path_labels)
             chosen_rule, fidelity_rule = relevance_subsets(neighbor_probs, n_sentiments, temp_subsets, pred, path_labels, rule_predictions)
             for word in chosen_rule:
 
@@ -96,6 +101,7 @@ def main():
                 pred_diff_word, prob_diff_word = get_pred_difference(pred, prob, x_left_omitted_word,
                                                                      x_left_omitted_word_len, x_right_omitted_word, x_right_omitted_word_len, y_true, target_word, target_len, B)
                 print('This word provides these prob differences: ', word, pred_diff_word, prob_diff_word)
+            print("Fidelity of all rules of instance x is: ", fidelity_instance)
             print("We choose this rule: ", chosen_rule, "And this corresponding fidelity: ", fidelity_rule)
             print("Iterations done.")
             #print('Predictions for neighbors', neighbor_predictions)
@@ -104,15 +110,19 @@ def main():
             #local_fidelity = get_tree_fidelity(rule_predictions, path_labels)
             #print("Fidelity for this instance is ", local_fidelity)
             #fidelity_scores = np.append(fidelity_scores, local_fidelity)
-            fidelity_scores[test_index, :] = fidelity_rule
+            fidelity_scores[test_index, :] = fidelity_instance
+            fidelity_chosen_rules[test_index, :] = fidelity_rule
             #print(fidelity_scores)
             average_fidelity = np.average(fidelity_scores)
+            average_rule_fid = np.average(fidelity_chosen_rules)
             print("Fidelity so far :", average_fidelity)
+            print("Fidelity of chosen rules : ", average_rule_fid)
             #print("Standard deviation:", np.std(fidelity_scores))
             print("_________________________________________________")
             print("/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/")
 
             results.write('Instance: ' + str(test_index) + '\n')
+            results.write('Sentence of instance: ' + str(sentence) + '\n')
             results.write('Potentially relevant subsets: ' + str(temp_subsets) + '\n' )
             results.write('Amount of potentially relevant subsets: ' + str(n_subsets) + '\n')
             results.write('\n')
@@ -122,8 +132,10 @@ def main():
             #results.write('Prediction of perturbed instances by b(z): ' + str(neighbor_predictions) + '\n')
             results.write('Most relevant subset (rule): ' + str(chosen_rule) + '\n')
             results.write('Fidelity for this chosen rule of instance: ' + str(fidelity_rule) + '\n')
+            results.write('Fidelity for all rules of instance: ' + str(fidelity_instance) + '\n')
             results.write('\n')
-            results.write('Average fidelity so far: ' + str(average_fidelity) + '\n')
+            results.write('Average fidelity of chosen rules so far: ' + str(average_rule_fid) + '\n')
+            results.write('Average fidelity of all rules so far: ' + str(average_fidelity) + '\n')
             results.write('Standard deviation of fidelity so far: ' + str(np.std(fidelity_scores)) + '\n')
             results.write('_________________________________________________________________' + '\n')
 
@@ -148,8 +160,9 @@ def get_tree_paths(root_leaf_paths):
     return paths, keys
 
 
-def get_subsets(paths):
+def get_subsets(paths, sentence):
     """
+    :param sentence:
     :param paths: root-leaf paths
     :param classifier_b: black box B
     :param car_instance: CAR
@@ -164,9 +177,12 @@ def get_subsets(paths):
 
         for word in range(n_words):
             split_word = paths[subset][word].split()
-            if len(split_word) < 2:
+            if len(split_word) < 2 :
+                #and paths[subset][word] in sentence
                 temporary.append(paths[subset][word])
         formatted_subsets.append(temporary)
+
+
     return formatted_subsets
 
 
@@ -249,7 +265,7 @@ def get_pred_difference(pred_b, prob_b, x_left_omitted, x_left_omitted_len, x_ri
                                                        x_right_omitted_len, y_true, target_word, target_len)
     pred_diff = prob_b - prob_omission
 
-    print("Probabilities for our 'neighbor': ", prob_omission)
+    #print("Probabilities for our 'neighbor': ", prob_omission)
     #print('Checking that probabilities sum up to 1: ', sum(prob_omission))
     #print("This is prediction difference: ", pred_diff)
     #print("This is prediction of 'neighbor': ", pred_omission)
@@ -293,12 +309,14 @@ def relevance_subsets(neighbor_probs, n_sentiments, temp_subsets, pred_x, labels
     print('Fidelity for this rule: ', fidelity)
     return important_subset, fidelity
 
-        # important_subset = np.array([important_subset])
-    #   rule_set[:,ding] = important_subset
-    # print(rule_set)
-    # important_words[test_index, :] = rule_set
-    # instance_pred_diff[test_index, :] = eff_pred_diff
-    # print(eff_pred_diff)
+
+def get_instance_fid(rule_pred, labels):
+    amount_pred = len(labels)
+    count = 0
+    for prediction in range(amount_pred):
+        if labels[prediction] == rule_pred[prediction]:
+            count = count + 1
+    return count/amount_pred
 
 if __name__ == '__main__':
     main()
