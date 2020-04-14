@@ -203,12 +203,6 @@ class Tree:
             return self.get_path(row, node.false_branch, path)
 
 
-
-
-
-
-
-
 def build_tree(rows, features, depth):
     """Builds the tree.
     Rules of recursion: 1) Believe that it works. 2) Start by checking
@@ -424,94 +418,3 @@ def make_pos_sentence(string_sentence, set_features):
     return sentence
 
 
-def main():
-    year = 2016
-    model = 'Olaf' # or 'Maria'
-    case = 'all'  # correct, incorrect or nothing for all
-    index = 4
-    num_samples = 5000
-    batch_size = 500
-    r = check_random_state(2020)
-
-
-    f = classifier( model=model)
-    classifier_pred, true_label, predictions, x_inverse_left, left_sentences, x_inverse_right, right_sentences = data(f, r, num_samples,
-                                                                                                     batch_size,
-                                                                                                     index=index)
-    features_right = right_sentences[0]
-
-
-
-    print(x_inverse_left)
-    print(x_inverse_right)
-    print(right_sentences)
-    print(predictions)
-    #Input are the left sentences
-    root = build_tree(right_sentences, features_right, 0)
-    tree = Tree(root)
-    print_tree(root)
-    print(root.decision)
-    paths = tree.get_paths()
-    print(root)
-    print(list(paths.keys()))
-    print('positive paths: ' + str(paths['1']))
-    print('negative paths:' + str(paths['-1']))
-    print('neutral paths:' + str(paths['0']))
-    print(predictions)
-    a = classify(right_sentences[3], root)
-    path = []
-    path.append(root)
-    path, pred = tree.get_path(right_sentences[4], root, [])
-    print(root.decision)
-    print(a)
-    print(right_sentences[4])
-    print(path)
-    print(pred)
-    ''' 
-    for row in x_inverse_right:
-        print ("Actual: %s. Predicted: %s" %
-               (row[-1], print_leaf(classify(row, my_tree))))
-'''
-
-if __name__ == '__main__':
- #   main()
-    print('d')
-
-''' 
-num_samples = 500
-f = classifier('Olaf')
-index = 24
-pred_f, true_label, predictions, sentence_matrix, set_features = data_POS(f, num_samples, index)
-
-root = build_tree(sentence_matrix, set_features, 0)
-tree = Tree(root)
-print_tree(root)
-
-paths = tree.get_paths()
-print(sentence_matrix)
-print(paths)
-path = tree.get_path(sentence_matrix[0], root, [])
-print(path)
-print([word for word in sentence_matrix[0] if word != None])
-test = make_pos_sentence(['the', 'is', 'belligerent', 'to', 'guests', 'that', 'have', 'a', 'complaint'], set_features)
-path = tree.get_path(test, root, [])
-print(test)
-print(path)
-
-print(set_features)
-print(true_label)
-print(pred_f)
-print(predictions)
-print(f.sentence_at(index))
-
-get_predStats(predictions)
-path = tree.get_path(sentence_matrix[0], root, [])
-print(path)
-print(sentence_matrix[0])
-print([word for word in sentence_matrix[0] if word != None])
-
-'''
-'''
-
-
-'''

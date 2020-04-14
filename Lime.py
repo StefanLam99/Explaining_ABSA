@@ -1,16 +1,18 @@
 from classifier import *
 from config import *
-from loadData import getStatsFromFile
 from utils import compare_preds
-from sklearn.linear_model import LinearRegression, LogisticRegression
+from sklearn.linear_model import LogisticRegression
 from sklearn.utils import check_random_state
+from utils import get_predStats
 import time
 import numpy as np
-from Anchor import get_perturbations, Neighbors
+#from Anchor import get_perturbations, Neighbors
+from BERT_pert import get_perturbations, Neighbors
 import warnings
 import os
 import en_core_web_lg
 warnings.filterwarnings('ignore')
+os.environ["KMP_WARNINGS"] = "FALSE"
 os.environ['SPACY_WARNING_IGNORE'] = 'W008'
 #np.set_printoptions(threshold=sys.maxsize)
 def main_uni():
@@ -229,7 +231,7 @@ def main_uni():
 
 def main_pos():
     begin = time.time()
-    model = 'Olaf'
+    model = 'Maria'
     #isWSP = False
     batch_size = 200 #we have to implement a batch size to get the predictions of the perturbed instances
     num_samples = 5000 #has to be divisible by batch size
@@ -243,12 +245,7 @@ def main_pos():
     dict = f.get_Allinstances()
     r = check_random_state(seed)
     write_path ='data/Lime2/test' + model + str(2016) + 'final'
-    '''
-    if(isWSP):
-        write_path = 'data/Lime2/WSP' + model + str(2016) + 'final'
-    else:
-        write_path = 'data/Lime2/SP' + model + str(2016) + 'final'
-    '''
+
     #Estimating Lime with multinominal logistic regression
     n_all_features = len(f.word_id_mapping)
     fidelity = []
@@ -287,15 +284,35 @@ def main_pos():
             X = X.reshape(1,-1)
             predictions_f = []
             x_lime = np.zeros((num_samples,x_left_len[index] + x_right_len[index]))
+            x_lime_left = np.zeros((num_samples, FLAGS.max_sentence_len))
+            x_lime_right = np.zeros((num_samples, FLAGS.max_sentence_len))
+            print('Time after perturbation: ' + str(time.time() - begin) + ' Seconds')
             for i in range(num_samples):
 
                 x_left_ids = f.to_input(pertleft[i].split())
                 x_right_ids = f.to_input(pertright[i].split())
+                x_lime_left[i,:] = x_left_ids
+                x_lime_right[i,:] = x_right_ids
+
                 x_lime[i,0:x_left_len[index]+x_right_len[index]] = np.append(x_left_ids[0][0:x_left_len[index]], x_right_ids[0][0:x_right_len[index]])
                 Z[i, x_left_ids] += 1
                 Z[i, x_right_ids] += 1
-                pred_f, _ = f.get_prob(x_left_ids, x[1], x_right_ids, x[3], x[4], x[5], x[6])
-                predictions_f.append(pred_f)
+                #pred_f, _ = f.get_prob(x_left_ids, x[1], x_right_ids, x[3], x[4], x[5], x[6])
+                #predictions_f.append(pred_f)
+
+
+
+            target_lime_word = np.tile(target_word[index], (num_samples, 1))
+            target_lime_word_len = np.tile(target_words_len[index], (num_samples))
+            y_lime_true = np.tile(y_true[index], (num_samples, 1))
+            x_lime_left_len = np.tile(x[1], (num_samples))
+            x_lime_right_len = np.tile(x[3], (num_samples))
+
+
+            # predicting the perturbations
+            predictions_f, _ = f.get_allProb(x_lime_left, x_lime_left_len, x_lime_right, x_lime_right_len,
+                                                       y_lime_true, target_lime_word, target_lime_word_len, batch_size,
+                                                       num_samples)
 
 
 
@@ -333,6 +350,10 @@ def main_pos():
 
             if(int(yhat[0]) == int(pred_b[index])):
                 correct_hit+=1
+            print(pertleft[0].split())
+            print(pertright[0].split())
+            print(x_lime)
+            get_predStats(predictions_f)
             print('Current instance: ' + str(index))
             print('Correct hit: ' + str(correct_hit))
             print('Current runtime: ' + str(time.time() - begin) + ' seconds')

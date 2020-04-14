@@ -169,9 +169,9 @@ def get_cf_instance_stats(f, cf_instance, index, pred_full):
         for instance in cf_instance[key]:
             nInstances += 1
             temp_instance = np.zeros(l_len + r_len)
-            print(instance)
+
             for i, word in enumerate(instance):
-                print(word)
+
                 if(len(word.split()) < 2 and inDict(f.word_id_mapping, word)):
                     temp_instance[i] = f.word_id_mapping[word]
                 else:
@@ -180,9 +180,7 @@ def get_cf_instance_stats(f, cf_instance, index, pred_full):
             instance_left = np.zeros(FLAGS.max_sentence_len)
             instance_left[0:l_len] = temp_instance[0:l_len]
             instance_left = instance_left.reshape((1, FLAGS.max_sentence_len))
-            print(l_len)
-            print(r_len)
-            print(temp_instance)
+
             instance_right = np.zeros(FLAGS.max_sentence_len)
             instance_right[0:r_len] = temp_instance[l_len:l_len+r_len]
             instance_right = instance_right.reshape((1, FLAGS.max_sentence_len))
@@ -430,7 +428,7 @@ def main_uniform():
     print('It took: ' + str(seconds) + ' seconds')
 
 def main_pos():
-
+    begin = time.time()
     #model = 'Maria' # or 'Olaf'
     model = 'Olaf'
     num_samples = 5000
@@ -454,16 +452,16 @@ def main_pos():
     correct_tree = 0
     ncf = 0
     ntree = 0
-    nlp = en_core_web_lg.load()
+
 
     with open(write_path + 'paths.txt', 'w') as results:
         for index in range(size):
             print('Current Instance: ' + str(index))
-            print('Current Runtime: ' + str(time.time() - begin))
+            print('Current Runtime: ' + str(time.time() - begin) + ' seconds')
             ## getting data and building trees
             #pred_c is prediction of the decision tree for the local instances
             pred_f, true_label, pred_c, sentence_matrix, set_features  = data_POS(f, num_samples, index, neighbors)
-
+            print('Current Runtime after Perturbation : ' + str(time.time() - begin) + ' seconds')
             #full
             root_full = build_tree(sentence_matrix, set_features, 0)
             tree_full = Tree(root_full)
@@ -497,9 +495,9 @@ def main_pos():
 
 
 
-            print(instance)
+            print('The instance is: ' + str(instance))
             cf_instance = get_cfInstance(instance, counterfactuals)
-            print(cf_instance)
+
             correct, nInstances, change = get_cf_instance_stats(f, cf_instance, index, pred_orig)
             #correct, nInstances = rules_fid(f, counterfactuals, left, right, index)
             correct_cf_instances += correct

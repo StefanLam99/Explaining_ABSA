@@ -4,9 +4,15 @@ import en_core_web_lg
 from numpy import unicode
 import numpy as np
 import sys
+import time
 from classifier import *
 
+import warnings
+import os
 
+warnings.filterwarnings('ignore')
+os.environ["KMP_WARNINGS"] = "FALSE"
+os.environ['SPACY_WARNING_IGNORE'] = 'W008'
 
 class Neighbors:
     def __init__(self, nlp_obj):
@@ -36,8 +42,9 @@ class Neighbors:
                 queries = [w for w in self.to_check]
 
                 by_similarity = sorted(queries, key=lambda w: word.similarity(w), reverse=True)
-                self.n[orig_word] = [(self.nlp(w.orth_)[0], word.similarity(w))
-                                 for w in by_similarity[:500]]
+                self.n[orig_word] = [(self.nlp(by_similarity[0].orth_)[0], word.similarity(by_similarity[0]))]
+                self.n[orig_word] += [(self.nlp(w.orth_)[0], word.similarity(w))
+                                 for w in by_similarity[1:500] if self.nlp(word.orth_)[0].text.split('_')[0] != self.nlp(w.orth_)[0].text.split('_')[0]]
 
         return self.n[orig_word]
 
@@ -75,7 +82,7 @@ def perturb_sentence(text, n, neighbors, proba_change=0.5,
                 t.lemma_ not in forbidden and t.tag_ not in forbidden_tags):
             r_neighbors = [
                 (unicode(x[0].text.encode('utf-8'), errors='ignore'), x[1])
-                for x in neighbors.neighbors(t.text)
+                for x in neighbors.neighbors(bert_tokens[i].text)
                 if neighbors.nlp(x[0].text.split('_')[0])[0].tag_ == t.tag_][:top_n]
             if not r_neighbors:
                 continue
@@ -132,15 +139,15 @@ def get_perturbations(pert_left, pert_right, neighbors, b, i, num_samples):
         #text = x_right_sentence[::-1]
         text = [w.replace('–', '-') for w in text]
 
-    nlp = en_core_web_lg.load()
+    #nlp = en_core_web_lg.load()
     present = []
-    neighbors = Neighbors(nlp)
+    #neighbors = Neighbors(nlp)
 
 
     raw_data, data = perturb_sentence(text, num_samples, neighbors, proba_change=0.5,
                                       top_n=50, forbidden=[], forbidden_tags=['PRP$'],
                                       forbidden_words=['be'],
-                                      pos=['NOUN', 'VERB', 'ADJ', 'ADV', 'ADP', 'DET'], use_proba=False,
+                                      pos=['NOUN', 'VERB', 'ADJ', 'ADV', 'ADP', 'DET'], use_proba=True,
                                       temperature=.4)
     perturbations = []
     output_data = []
@@ -163,11 +170,23 @@ def get_perturbations(pert_left, pert_right, neighbors, b, i, num_samples):
 
     return perturbations, instance_sentiment, text, b, x
 
-
+''' 
 if __name__ == '__main__':
+    begin = time.time()
     f = classifier('Maria')
     index = 4
     num_samples = 5000
-    perturbations, instance_sentiment, text, b, x = get_perturbations(False, True, f, index, num_samples)
+    nlp = en_core_web_lg.load()
+    neighbors = Neighbors(nlp)
+    print(neighbors.neighbors('nice'))
+    print(neighbors.neighbors('nice_81'))
+    print(len(neighbors.neighbors('nice_81')))
+
+    perturbationsl, instance_sentiment, text, b, x = get_perturbations(False, True, neighbors, f, index, num_samples)
+    perturbationsr, instance_sentiment, text, b, x = get_perturbations(True, False, neighbors, f, index, num_samples)
+
     print(f.sentence_at(index))
-    print(perturbations)
+    print(perturbationsl)
+    print(perturbationsr)
+    print(time.time() -begin)
+'''
