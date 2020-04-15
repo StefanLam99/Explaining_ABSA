@@ -6,7 +6,7 @@ import numpy as np
 import sys
 import time
 from classifier import *
-
+from spacy.tokenizer import Tokenizer
 import warnings
 import os
 
@@ -28,6 +28,7 @@ class Neighbors:
         for word, vector in D.items():
             self.vocab.set_vector(word, vector)
         self.nlp = nlp_obj
+        self.nlp.tokenizer = Tokenizer(self.nlp.vocab)
         self.to_check = [self.vocab[w] for w in self.vocab.strings]
         self.n = {}
 
@@ -44,7 +45,8 @@ class Neighbors:
                 by_similarity = sorted(queries, key=lambda w: word.similarity(w), reverse=True)
                 self.n[orig_word] = [(self.nlp(by_similarity[0].orth_)[0], word.similarity(by_similarity[0]))]
                 self.n[orig_word] += [(self.nlp(w.orth_)[0], word.similarity(w))
-                                 for w in by_similarity[1:500] if self.nlp(word.orth_)[0].text.split('_')[0] != self.nlp(w.orth_)[0].text.split('_')[0]]
+                                 for w in by_similarity[100:600] if self.nlp(word.orth_)[0].text.split('_')[0] != self.nlp(w.orth_)[0].text.split('_')[0]]
+
 
         return self.n[orig_word]
 
@@ -65,9 +67,10 @@ def perturb_sentence(text, n, neighbors, proba_change=0.5,
     # forbidden_tags, words: self explanatory
     # pos: which POS to change
     normal_text = [w.split('_')[0] for w in text]
-    #normal_text = ' '.join(normal_text)
+    nomrla_text = ' '.join(normal_text)
     normal_tokens = neighbors.nlp(unicode(normal_text))
-    bert_tokens = neighbors.nlp(unicode(text))
+    bert_text = ' '.join(text)
+    bert_tokens = neighbors.nlp(unicode(bert_text))
     # print [x.pos_ for x in tokens]
     eligible = []
     forbidden = set(forbidden)
@@ -96,8 +99,11 @@ def perturb_sentence(text, n, neighbors, proba_change=0.5,
                         weights[j] = 0
                 # print t.text
                 # print sorted(zip(t_neighbors, weights), key=lambda x:x[1], reverse=True)[:10]
-                raw[:, i] = np.random.choice(t_neighbors, n,  p=weights,
+                print(t_neighbors)
+                raw[:, i] = np.random.choice(t_neighbors, n, p = weights,
                                              replace=True)
+                print(raw[:,i])
+                print('hello')
                 data[:, i] = raw[:, i] == t.text
             else:
                 n_changed = np.random.binomial(n, proba_change)
@@ -132,12 +138,14 @@ def get_perturbations(pert_left, pert_right, neighbors, b, i, num_samples):
     if pert_left:
         text = b.get_String_Sentence(b.x_left[i])
         text = [w.replace('–', '-') for w in text]
+        print(text)
 
         #text = [s.encode() for s in text]
     if pert_right:
         text = b.get_String_Sentence(b.x_right[i])
         #text = x_right_sentence[::-1]
         text = [w.replace('–', '-') for w in text]
+        print(text)
 
     #nlp = en_core_web_lg.load()
     present = []
@@ -147,12 +155,13 @@ def get_perturbations(pert_left, pert_right, neighbors, b, i, num_samples):
     raw_data, data = perturb_sentence(text, num_samples, neighbors, proba_change=0.5,
                                       top_n=50, forbidden=[], forbidden_tags=['PRP$'],
                                       forbidden_words=['be'],
-                                      pos=['NOUN', 'VERB', 'ADJ', 'ADV', 'ADP', 'DET'], use_proba=True,
+                                      pos=['NOUN', 'VERB', 'ADJ', 'ADV', 'ADP', 'DET'], use_proba=False,
                                       temperature=.4)
     perturbations = []
     output_data = []
     for i in range(0, len(raw_data)):
         new_data = raw_data[i].replace('"', "'")
+        '''  
         new_data = new_data.replace(" ' , ' ", " ")
         new_data = new_data.replace(" '", "")
         new_data = new_data.replace("' ", "")
@@ -165,12 +174,13 @@ def get_perturbations(pert_left, pert_right, neighbors, b, i, num_samples):
         new_data = new_data.replace(" ll ", " 'll ")
         new_data = new_data.replace(" d ", " 'd ")
         new_data = new_data.replace(" ino ", " 'ino ")
+        '''
         output_data.append(new_data)
     perturbations = output_data
 
     return perturbations, instance_sentiment, text, b, x
 
-''' 
+'''' 
 if __name__ == '__main__':
     begin = time.time()
     f = classifier('Maria')
@@ -189,4 +199,5 @@ if __name__ == '__main__':
     print(perturbationsl)
     print(perturbationsr)
     print(time.time() -begin)
+
 '''

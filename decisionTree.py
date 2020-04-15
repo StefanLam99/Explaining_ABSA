@@ -3,7 +3,8 @@ from __future__ import print_function
 from Lime import lime_perturbation
 from classifier import *
 from sklearn.utils import check_random_state
-from Anchor import get_perturbations, Neighbors
+#from Anchor import get_perturbations, Neighbors
+from BERT_pert import get_perturbations, Neighbors
 import en_core_web_lg
 class Decision:
     def __init__(self, c, word):

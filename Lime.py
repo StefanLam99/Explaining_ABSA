@@ -267,7 +267,7 @@ def main_pos():
     targets = []
     x_len = []
     coefs = []
-    size = 30
+    size = 10
 
     pred_b, prob = f.get_allProb(x_left, x_left_len, x_right, x_right_len, y_true, target_word, target_words_len, size, size)
     original_x = []

@@ -428,10 +428,9 @@ def main_uniform():
     print('It took: ' + str(seconds) + ' seconds')
 
 def main_pos():
-    begin = time.time()
     #model = 'Maria' # or 'Olaf'
-    model = 'Olaf'
-    num_samples = 5000
+    model = 'Maria'
+    num_samples = 2000
 
     write_path = 'data/Counterfactuals/test' + model + str(num_samples)
 
@@ -496,6 +495,7 @@ def main_pos():
 
 
             print('The instance is: ' + str(instance))
+
             cf_instance = get_cfInstance(instance, counterfactuals)
 
             correct, nInstances, change = get_cf_instance_stats(f, cf_instance, index, pred_orig)
@@ -506,6 +506,8 @@ def main_pos():
 
 
             orig_path = tree_full.get_path(sentence_matrix[0], root_full, [])
+            print('Original Path: ' + str(orig_path))
+            print('Counterfactuals: ' + str(counterfactuals))
             orig_instance = [word for word in sentence_matrix[0] if word != None]
             results.write('Instance: ' + str(index) + '\n')
             results.write('\n')
