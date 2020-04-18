@@ -1,8 +1,66 @@
 from Counterfactuals import *
 import time
 
+def evaluation_main():
+    model = 'Maria'
+    if model == 'Olaf':
+        write_path = 'data/LACE/LACE_predDifference' + model + str(2016)
+        # write_path = 'data/LACE/LACE_fidelityComputationsPOS' + model + str(2016)
+        input_file = 'data/programGeneratedData/300remainingtestdata2016.txt'
+    elif model == "Maria":
+        write_path = 'data/LACE/LACE_predDifference' + model + str(2016)
+        # write_path = 'data/LACE/LACE_fidelityComputationsPOS' + model + str(2016)
+        input_file = 'data/programGeneratedData/768remainingtestdata2016.txt'
+    B = classifier(model)
+    size, polarity = getStatsFromFile(input_file)  # polarity is a vector with the classifications of the instances
+    predictions = np.array([])
+    probabilities = np.zeros((int(size), 3))
+
+    begin = time.time()
+    with open(write_path + '.txt', 'w') as results:
+        for test_index in range(152, 153):
+            print("Instance: ", test_index)
+            x_left, x_left_len, x_right, x_right_len, y_true, target_word, target_words_len = B.get_instance(test_index)
+            pred, prob = B.get_prob(x_left, x_left_len, x_right, x_right_len, y_true, target_word, target_words_len)
+            predictions = np.append(predictions, pred)
+            print('Prediction of instance x: ', pred)
+            probabilities[test_index, :] = prob
+            print('Probabilities of instance x: ', prob)
+            # print("Before omission: (left and right)", x_left, x_right)
+            s = B.get_String_Sentence(B.x_left[test_index])
+            t = B.get_String_Sentence(B.x_right[test_index])
+            sentence = s + t
+            print("Left and right sentence part: ", s, t)
+            anchor_paths = [['very', 'creme', 'was', 'the', 'but', 'brulee', ',', 'and']]
+            #['positive', 'nice', 'the', 'is'], ['we', 'there', 'the', 'fantastic', 'waiting', 'is', 'has', 'been', ',',
+                                           #     'and']
+
+
+            counterfactual = [['not weird', 'not odd', 'not strange', 'not obvious', 'delicious'], ['not', 'delicious', 'another'], ['weird', 'delicious', 'savory', 'not very', 'not all'], ['not weird', 'odd', 'delicious', 'very', 'concealer']]
+                #[['not bad', 'not weird', 'not any', 'not little', 'not crazy'],['bad', 'not guy', 'not lot', 'never', 'not location'], ['bad', 'not guy', 'not lot', 'not never',
+                 #                                                    'not location'], ['not bad', 'weird', 'not guy',
+                 #                                                                      'not once', 'not even'], [
+                #'not bad', 'not weird', 'any', 'not', 'all'], ['not bad', 'not weird', 'any', 'not not', 'situation'], [
+                #'not bad', 'not weird', 'not any', 'little', 'shame']]
+            #['not decent', 'not intriguing', 'not glorious', 'not unique', "'ve"], ['decent', 'dual']
+            temp_subsets = get_subsets(counterfactual, sentence)
+            print("Paths before formatting: ", counterfactual)
+            print("Paths after formatting: ", temp_subsets)
+
+            path = ['thing']
+            x_left_omitted, x_left_omitted_len, x_right_omitted, x_right_omitted_len, y_true, target_word, target_len, dec_rule_right, dec_rule_right_len, dec_rule_left, dec_rule_left_len = \
+                omit_subset(path, x_left, x_left_len, x_right, x_right_len, y_true, target_word, target_words_len, B)
+            pred_diff, pred_neighbor = get_pred_difference(pred, prob, x_left_omitted, x_left_omitted_len, x_right_omitted,
+                                                           x_right_omitted_len, y_true, target_word, target_len, B)
+            print("These are prediction difference vectors for instance", test_index)
+            print("Word", path, pred_diff)
+
+
+
+
+
 def main():
-    model = 'Olaf'
+    model = 'Maria'
     if model == 'Olaf':
         write_path = 'data/LACE/LACE_fidelityComputationsTEST' + model + str(2016)
         #write_path = 'data/LACE/LACE_fidelityComputationsPOS' + model + str(2016)
@@ -27,7 +85,7 @@ def main():
     fidelity_chosen_rules = np.zeros((int(size), 1))
     begin = time.time()
     with open(write_path + '.txt', 'w') as results:
-        for test_index in range(7, 8):
+        for test_index in range(int(size)):
             r = check_random_state(2020)
             num_samples = 5000
             batch_size = 200
@@ -177,8 +235,8 @@ def get_subsets(paths, sentence):
 
         for word in range(n_words):
             split_word = paths[subset][word].split()
-            if len(split_word) < 2 :
-                #and paths[subset][word] in sentence
+            if len(split_word) < 2 and paths[subset][word] in sentence:
+
                 temporary.append(paths[subset][word])
         formatted_subsets.append(temporary)
 
@@ -265,7 +323,7 @@ def get_pred_difference(pred_b, prob_b, x_left_omitted, x_left_omitted_len, x_ri
                                                        x_right_omitted_len, y_true, target_word, target_len)
     pred_diff = prob_b - prob_omission
 
-    #print("Probabilities for our 'neighbor': ", prob_omission)
+    print("Probabilities for our 'neighbor': ", prob_omission)
     #print('Checking that probabilities sum up to 1: ', sum(prob_omission))
     #print("This is prediction difference: ", pred_diff)
     #print("This is prediction of 'neighbor': ", pred_omission)
@@ -319,4 +377,4 @@ def get_instance_fid(rule_pred, labels):
     return count/amount_pred
 
 if __name__ == '__main__':
-    main()
+    evaluation_main()
