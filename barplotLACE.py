@@ -86,10 +86,12 @@ Barplots(negBar, neuBar, posBar,words, save_path, true, predicted)
 
 #RP OLAF
 #['the', 'only', 'positive', 'thing', 'about']['mioposto']['is', 'the', 'nice', 'location', '.']
-negBar = [-7.30426291e-06,  8.54646089e-06 , -1.50353208e-05, 5.81028326e-06, -0.02597801, -1.04290248e-05]
-neuBar = [-5.14377660e-08, 8.05208114e-08, -3.70028843e-07, 5.81134110e-08, -0.00010079  , -1.82397471e-07]
-posBar = [7.27176666e-06, -8.70227814e-06, 1.53779984e-05, -5.96046448e-06, 0.02607876, 1.06096268e-05]
-words = ['very', 'was', 'the', 'but', 'delicious', 'savory']
+negBar = [-7.30426291e-06,  8.54646089e-06 , 5.81028326e-06, -0.02597801, -1.04290248e-05]
+neuBar = [-5.14377660e-08, 8.05208114e-08,  5.81134110e-08, -0.00010079  , -1.82397471e-07]
+posBar = [7.27176666e-06, -8.70227814e-06,  -5.96046448e-06, 0.02607876, 1.06096268e-05]
+words = ['very', 'was', 'but', 'delicious', 'savory']
+
+# 'the', -1.50353208e-05 -3.70028843e-07,1.53779984e-05,
 save_path = 'data/LACE/plots/275'
 true = '275'
 predicted = 'rule based models'
