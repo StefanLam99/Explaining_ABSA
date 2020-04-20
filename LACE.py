@@ -2,7 +2,7 @@ from Counterfactuals import *
 import time
 
 def evaluation_main():
-    model = 'Maria'
+    model = 'Olaf'
     if model == 'Olaf':
         write_path = 'data/LACE/LACE_predDifference' + model + str(2016)
         # write_path = 'data/LACE/LACE_fidelityComputationsPOS' + model + str(2016)
@@ -18,7 +18,7 @@ def evaluation_main():
 
     begin = time.time()
     with open(write_path + '.txt', 'w') as results:
-        for test_index in range(152, 153):
+        for test_index in range(275, 276):
             print("Instance: ", test_index)
             x_left, x_left_len, x_right, x_right_len, y_true, target_word, target_words_len = B.get_instance(test_index)
             pred, prob = B.get_prob(x_left, x_left_len, x_right, x_right_len, y_true, target_word, target_words_len)
@@ -31,23 +31,16 @@ def evaluation_main():
             t = B.get_String_Sentence(B.x_right[test_index])
             sentence = s + t
             print("Left and right sentence part: ", s, t)
-            anchor_paths = [['very', 'creme', 'was', 'the', 'but', 'brulee', ',', 'and']]
-            #['positive', 'nice', 'the', 'is'], ['we', 'there', 'the', 'fantastic', 'waiting', 'is', 'has', 'been', ',',
-                                           #     'and']
-
-
-            counterfactual = [['not weird', 'not odd', 'not strange', 'not obvious', 'delicious'], ['not', 'delicious', 'another'], ['weird', 'delicious', 'savory', 'not very', 'not all'], ['not weird', 'odd', 'delicious', 'very', 'concealer']]
-                #[['not bad', 'not weird', 'not any', 'not little', 'not crazy'],['bad', 'not guy', 'not lot', 'never', 'not location'], ['bad', 'not guy', 'not lot', 'not never',
-                 #                                                    'not location'], ['not bad', 'weird', 'not guy',
-                 #                                                                      'not once', 'not even'], [
-                #'not bad', 'not weird', 'any', 'not', 'all'], ['not bad', 'not weird', 'any', 'not not', 'situation'], [
-                #'not bad', 'not weird', 'not any', 'little', 'shame']]
-            #['not decent', 'not intriguing', 'not glorious', 'not unique', "'ve"], ['decent', 'dual']
+            counterfactual = ['not worth_24', 'not inconsistent_1', 'not small_5', 'not inconsistent_2', 'not t_41']
             temp_subsets = get_subsets(counterfactual, sentence)
             print("Paths before formatting: ", counterfactual)
             print("Paths after formatting: ", temp_subsets)
 
-            path = ['thing']
+            path = ['delicious','very']
+
+
+
+
             x_left_omitted, x_left_omitted_len, x_right_omitted, x_right_omitted_len, y_true, target_word, target_len, dec_rule_right, dec_rule_right_len, dec_rule_left, dec_rule_left_len = \
                 omit_subset(path, x_left, x_left_len, x_right, x_right_len, y_true, target_word, target_words_len, B)
             pred_diff, pred_neighbor = get_pred_difference(pred, prob, x_left_omitted, x_left_omitted_len, x_right_omitted,
@@ -78,9 +71,7 @@ def main():
     nlp = en_core_web_lg.load()
     neighbors = Neighbors(nlp)
 
-    important_words = np.zeros((int(size), 3))
-    instance_pred_diff = np.zeros((int(size), 3))
-    #fidelity_scores = np.array([])
+
     fidelity_scores = np.zeros((int(size), 1))
     fidelity_chosen_rules = np.zeros((int(size), 1))
     begin = time.time()
@@ -97,13 +88,12 @@ def main():
             print('Prediction of instance x: ', pred)
             probabilities[test_index, :] = prob
             print('Probabilities of instance x: ', prob)
-           # print("Before omission: (left and right)", x_left, x_right)
             s = B.get_String_Sentence(B.x_left[test_index])
             t = B.get_String_Sentence(B.x_right[test_index])
             sentence = s + t
             print("Left and right sentence part: ", s, t)
-            print("Now we draw the tree: ")
-            # DRAWING TREE
+            print("Now we construct the tree: ")
+            # CONSTRUCTING TREE
             pred_f, true_label, pred_c, sentence_matrix, set_features = data_POS(B, num_samples, test_index,neighbors)
 
             root_full = build_tree(sentence_matrix, set_features, 0)
@@ -121,21 +111,11 @@ def main():
             rule_predictions = np.array([])
             print("We go over this many iterations:", n_subsets)
             for relevant_subset in range(n_subsets):
-                #print("ITERATION", relevant_subset)
                 subset = temp_subsets[relevant_subset]
-                #print("Before left: ", x_left)
-                #print("Before right: ", x_right)
-                #print(len(x_right))
-                #print(x_right.shape)
-                #print("Subset: ", temp_subsets[relevant_subset])
                 x_left_omitted, x_left_omitted_len, x_right_omitted, x_right_omitted_len, y_true, target_word, target_len, dec_rule_right, dec_rule_right_len, dec_rule_left, dec_rule_left_len = \
                     omit_subset(subset, x_left, x_left_len, x_right, x_right_len, y_true, target_word, target_words_len, B)
                 pred_rule, prob_rule = B.get_prob(dec_rule_left, dec_rule_left_len, dec_rule_right, dec_rule_right_len, y_true, target_word, target_words_len)
                 rule_predictions = np.append(rule_predictions, pred_rule)
-                #print("After omission: (left and right)", x_left_omitted_len, x_right_omitted_len)
-                #print("Test: ", dec_rule_right)
-                #print("After: x_left_omitted", x_left_omitted)
-                #print("After: x_right_omitted ", x_right_omitted)
                 pred_diff, pred_neighbor = get_pred_difference(pred, prob, x_left_omitted, x_left_omitted_len, x_right_omitted,
                                                 x_right_omitted_len, y_true, target_word, target_len, B)
                 neighbor_probs[relevant_subset, :] = pred_diff
@@ -146,7 +126,7 @@ def main():
             #stats = np.max(neighbor_probs, 0)
             #print("Maximum values of all columns ", stats)
 
-            #print(len(neighbor_probs))
+
             n_sentiments = 3
             fidelity_instance = get_instance_fid(rule_predictions, path_labels)
             chosen_rule, fidelity_rule = relevance_subsets(neighbor_probs, n_sentiments, temp_subsets, pred, path_labels, rule_predictions)
@@ -155,7 +135,7 @@ def main():
                 x_left_omitted_word, x_left_omitted_word_len, x_right_omitted_word, x_right_omitted_word_len, y_true, target_word, target_len, word_rule_right, word_rule_right_len, word_rule_left, word_rule_left_len = \
                     omit_subset(word, x_left, x_left_len, x_right, x_right_len, y_true, target_word, target_words_len,
                                 B)
-                #print(x_right_omitted_word)
+
                 pred_diff_word, prob_diff_word = get_pred_difference(pred, prob, x_left_omitted_word,
                                                                      x_left_omitted_word_len, x_right_omitted_word, x_right_omitted_word_len, y_true, target_word, target_len, B)
                 print('This word provides these prob differences: ', word, pred_diff_word, prob_diff_word)
@@ -165,9 +145,7 @@ def main():
             #print('Predictions for neighbors', neighbor_predictions)
             print('Rule predictions ', rule_predictions)
             print("Labels by decision tree: ", path_labels)
-            #local_fidelity = get_tree_fidelity(rule_predictions, path_labels)
-            #print("Fidelity for this instance is ", local_fidelity)
-            #fidelity_scores = np.append(fidelity_scores, local_fidelity)
+
             fidelity_scores[test_index, :] = fidelity_instance
             fidelity_chosen_rules[test_index, :] = fidelity_rule
             #print(fidelity_scores)
@@ -324,11 +302,6 @@ def get_pred_difference(pred_b, prob_b, x_left_omitted, x_left_omitted_len, x_ri
     pred_diff = prob_b - prob_omission
 
     print("Probabilities for our 'neighbor': ", prob_omission)
-    #print('Checking that probabilities sum up to 1: ', sum(prob_omission))
-    #print("This is prediction difference: ", pred_diff)
-    #print("This is prediction of 'neighbor': ", pred_omission)
-    sent_diff = pred_b - pred_omission
-    # print(sent_diff) #hier heb je niet zoveel aan
     return pred_diff, pred_omission
 
 
