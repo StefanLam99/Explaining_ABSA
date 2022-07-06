@@ -64,7 +64,7 @@ greenlet==0.4.15
 grpcio==1.27.2
 h5py==2.10.0
 heapdict==1.0.0
-html5lib==0.9999999
+html5lib==0.999999999
 hyperopt==0.2.3
 idna==2.8
 imageio==2.5.0
